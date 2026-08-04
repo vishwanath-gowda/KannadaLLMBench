@@ -11,7 +11,7 @@ This file records why candidate sources are approved or review-gated. The machin
 - Declared dataset license: CC0
 - Paper: ACL 2023, *Towards Leaving No Indic Language Behind*
 
-The pinned dataset card explicitly maps the Kannada split and states that datasets created by the work are released under CC0. This is the preferred default source for Kannada corpus experiments.
+The pinned dataset card explicitly maps the Kannada split and states that datasets created by the work are released under CC0. This is the preferred default source for Kannada corpus experiments and the first RomanBench controlled-candidate construction pipeline.
 
 ## Aya Collection — review required
 
@@ -32,10 +32,30 @@ The card describes the cleaned data and license but does not provide a sufficien
 ## Aksharantar — review required / partition before use
 
 - Dataset: `ai4bharat/Aksharantar`
-- Scope: Indic transliteration pairs, including Kannada
-- Licensing: source-dependent; the dataset card distinguishes manually collected CC-BY data from mined/existing CC0 data
+- Scope: approximately 26M Indic-script/Roman transliteration pairs across 20 languages, including Kannada
+- Row metadata includes a `source` field
+- Current card licensing statement:
+  - manually collected data: CC BY
+  - mined data from Samanantar and IndicCorp: CC0
+  - existing-source data: CC0
 
-Do not ingest the repository wholesale. A future RomanBench pipeline may select only a clearly licensed source partition after validating current files/metadata against the paper and retaining the row-level source field.
+The dataset card also states that AI4Bharat does not own the underlying text from which mined data was extracted and licenses the packaging of mined data under CC0. Because the aggregate dataset mixes source classes, KannadaLLMBench does **not** approve it wholesale even though some row classes are permissively licensed.
+
+A future Aksharantar integration must:
+
+1. pin an immutable dataset revision;
+2. preserve the row-level `source` field;
+3. explicitly whitelist source classes whose license/provenance basis has been reviewed;
+4. record the resulting subset definition in the manifest;
+5. avoid claiming that repository-level licensing transfers ownership of upstream text.
+
+Source reviewed: `https://huggingface.co/datasets/ai4bharat/Aksharantar`.
+
+## Transliteration implementation dependency — approved for code use
+
+RomanBench controlled variants use the `indic-transliteration` Python package for Kannada-script to IAST conversion. PyPI identifies the package as MIT licensed. The package is an implementation dependency, not benchmark source data; RomanBench still records the license/provenance of the underlying Kannada sentence independently.
+
+Package: `https://pypi.org/project/indic-transliteration/`.
 
 ## Approval rule
 
