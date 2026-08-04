@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -111,6 +112,7 @@ def main() -> None:
 
     bytes_written = write_jsonl(args.output, rows)
     manifest_path = args.output.with_suffix(args.output.suffix + ".manifest.json")
+    variant_counts = Counter(row["variant_type"] for row in rows)
     manifest = {
         "track": "romanbench",
         "construction_stage": "controlled_synthetic_candidates",
@@ -121,7 +123,7 @@ def main() -> None:
         "output_file": str(args.output),
         "families": len(seen_controls),
         "records": len(rows),
-        "variants_per_family": 3,
+        "variant_counts": dict(sorted(variant_counts.items())),
         "source_records_scanned": source_records,
         "rejected_sentences_or_records": rejected,
         "bytes": bytes_written,
@@ -133,6 +135,7 @@ def main() -> None:
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"families={manifest['families']} records={manifest['records']} output={args.output}")
+    print(f"variants={manifest['variant_counts']}")
     print(f"manifest={manifest_path}")
 
 
