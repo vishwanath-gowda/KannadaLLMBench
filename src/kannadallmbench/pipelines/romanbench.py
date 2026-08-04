@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import re
 import unicodedata
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from kannadallmbench.data_registry import DataSource
+from kannadallmbench.data_registry import DataSource, require_approved
 from kannadallmbench.pipelines.transforms import kannada_character_ratio, normalize_text
 
 _SENTENCE_RE = re.compile(r"[^.!?।॥\n]+(?:[.!?।॥]+|(?=\n)|$)")
@@ -50,6 +52,15 @@ class RomanBenchFilter:
     max_words: int = 30
     min_kannada_ratio: float = 0.75
     max_digit_ratio: float = 0.20
+
+
+@dataclass(frozen=True)
+class ConstructionStats:
+    families: int
+    records: int
+    source_records_scanned: int
+    rejected_sentences_or_records: int
+    variant_counts: dict[str, int]
 
 
 def split_candidate_sentences(text: str) -> list[str]:
@@ -133,6 +144,7 @@ def build_candidate_rows(
     kannada_text: str,
 ) -> list[dict[str, Any]]:
     """Build one synthetic RomanBench semantic family from a Kannada control sentence."""
+    require_approved(source)
     control = normalize_text(kannada_text)
     family_id = stable_family_id(source, control)
     rows: list[dict[str, Any]] = []
@@ -164,6 +176,61 @@ def build_candidate_rows(
             }
         )
     return rows
+
+
+def construct_candidate_dataset(
+    records: Iterable[dict[str, Any]],
+    *,
+    source: DataSource,
+    text_field: str = "text",
+    max_families: int = 2000,
+    config: RomanBenchFilter | None = None,
+) -> tuple[list[dict[str, Any]], ConstructionStats]:
+    """Construct a bounded RomanBench candidate dataset from an approved record stream."""
+    require_approved(source)
+    if max_families <= 0:
+        raise ValueError("max_families must be > 0")
+    config = config or RomanBenchFilter()
+    seen_controls: set[str] = set()
+    output: list[dict[str, Any]] = []
+    rejected = 0
+    source_records_scanned = 0
+
+    for record_index, record in enumerate(records):
+        source_records_scanned += 1
+        raw = record.get(text_field)
+        if not isinstance(raw, str):
+            rejected += 1
+            continue
+        for sentence_index, sentence in enumerate(split_candidate_sentences(raw)):
+            if not is_candidate_sentence(sentence, config):
+                rejected += 1
+                continue
+            if sentence in seen_controls:
+                continue
+            seen_controls.add(sentence)
+            output.extend(
+                build_candidate_rows(
+                    source=source,
+                    source_record_index=record_index,
+                    sentence_index=sentence_index,
+                    kannada_text=sentence,
+                )
+            )
+            if len(seen_controls) >= max_families:
+                break
+        if len(seen_controls) >= max_families:
+            break
+
+    variants = Counter(row["variant_type"] for row in output)
+    stats = ConstructionStats(
+        families=len(seen_controls),
+        records=len(output),
+        source_records_scanned=source_records_scanned,
+        rejected_sentences_or_records=rejected,
+        variant_counts=dict(sorted(variants.items())),
+    )
+    return output, stats
 
 
 def contains_kannada(text: str) -> bool:
