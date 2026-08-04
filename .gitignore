@@ -3,7 +3,22 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
-data/external/
-results/**/*.json
-results/**/*.jsonl
+.ruff_cache/
+.mypy_cache/
 .DS_Store
+.env
+
+# Downloaded/generated data is private/local until explicitly reviewed.
+data/raw/
+data/samples/
+data/processed/
+data/external/
+data/releases/*
+!data/releases/.gitkeep
+
+# Evaluation/model artifacts
+results/
+model_outputs/
+*.safetensors
+*.gguf
+*.mlx
