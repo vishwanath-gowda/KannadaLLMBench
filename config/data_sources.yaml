@@ -1,0 +1,63 @@
+version: 1
+policy: docs/data-governance.md
+sources:
+  indiccorp_v2_kannada:
+    name: IndicCorpV2 Kannada
+    dataset_id: ai4bharat/IndicCorpV2
+    config_name: indiccorp_v2
+    split: kan_Knda
+    data_dir: data/kan_Knda
+    revision: 984b75b20ce408f9ba27c6558e9279e8e1b6edfd
+    license: CC0-1.0
+    status: approved
+    language: kn
+    provenance_url: https://huggingface.co/datasets/ai4bharat/IndicCorpV2
+    citation_url: https://aclanthology.org/2023.acl-long.693/
+    tags: [pretraining, monolingual, kannada, cc0]
+    field_map:
+      text: text
+    notes: >-
+      Preferred default corpus source. AI4Bharat states that datasets created as
+      part of IndicCorpV2 are released under CC0. Keep the pinned revision in all
+      derived manifests.
+
+  aya_collection:
+    name: Aya Collection
+    dataset_id: CohereLabs/aya_collection
+    license: Apache-2.0
+    status: review_required
+    language: kn
+    provenance_url: https://huggingface.co/datasets/CohereLabs/aya_collection
+    citation_url: https://arxiv.org/abs/2402.06619
+    tags: [instruction, multilingual, apache-2.0]
+    notes: >-
+      Repository license is permissive, but the collection is assembled from many
+      upstream datasets. Approve only specific Kannada subcollections after their
+      source lineage is reviewed.
+
+  english_kannada_cleaned:
+    name: English-Kannada Cleaned
+    dataset_id: ramachandrajoshi/english-kannada-cleaned
+    license: Apache-2.0
+    status: review_required
+    language: kn
+    provenance_url: https://huggingface.co/datasets/ramachandrajoshi/english-kannada-cleaned
+    tags: [translation, parallel, apache-2.0]
+    notes: >-
+      Dataset card has an Apache-2.0 license and describes cleaned sentence pairs,
+      but does not establish the upstream source lineage strongly enough for the
+      project's default approved set.
+
+  aksharantar:
+    name: Aksharantar
+    dataset_id: ai4bharat/Aksharantar
+    license: mixed-cc-by-and-cc0
+    status: review_required
+    language: kn
+    provenance_url: https://huggingface.co/datasets/ai4bharat/Aksharantar
+    citation_url: https://arxiv.org/abs/2205.03018
+    tags: [transliteration, romanization, mixed-license]
+    notes: >-
+      Useful for RomanBench research, but licensing is partition-dependent and
+      historical Hub metadata has been inconsistent. Do not use wholesale. Review
+      source labels and retain only a clearly licensed partition before approval.
