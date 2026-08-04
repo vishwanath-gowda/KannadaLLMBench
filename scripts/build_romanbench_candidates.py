@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections import Counter
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,9 +18,7 @@ from kannadallmbench.pipelines.hf import stream_hf_dataset  # noqa: E402
 from kannadallmbench.pipelines.manifest import sha256_file  # noqa: E402
 from kannadallmbench.pipelines.romanbench import (  # noqa: E402
     RomanBenchFilter,
-    build_candidate_rows,
-    is_candidate_sentence,
-    split_candidate_sentences,
+    construct_candidate_dataset,
 )
 
 REGISTRY = ROOT / "config" / "data_sources.yaml"
@@ -76,43 +73,18 @@ def main() -> None:
         data_dir=source.data_dir,
     )
 
-    seen_controls: set[str] = set()
-    rows: list[dict[str, Any]] = []
-    rejected = 0
-    source_records = 0
-
-    for record_index, record in enumerate(dataset):
-        source_records += 1
-        raw = record.get(text_field)
-        if not isinstance(raw, str):
-            rejected += 1
-            continue
-        for sentence_index, sentence in enumerate(split_candidate_sentences(raw)):
-            if not is_candidate_sentence(sentence, config):
-                rejected += 1
-                continue
-            if sentence in seen_controls:
-                continue
-            seen_controls.add(sentence)
-            rows.extend(
-                build_candidate_rows(
-                    source=source,
-                    source_record_index=record_index,
-                    sentence_index=sentence_index,
-                    kannada_text=sentence,
-                )
-            )
-            if len(seen_controls) >= args.families:
-                break
-        if len(seen_controls) >= args.families:
-            break
-
+    rows, stats = construct_candidate_dataset(
+        dataset,
+        source=source,
+        text_field=text_field,
+        max_families=args.families,
+        config=config,
+    )
     if not rows:
         raise SystemExit("No candidates produced; inspect source configuration and filters")
 
     bytes_written = write_jsonl(args.output, rows)
     manifest_path = args.output.with_suffix(args.output.suffix + ".manifest.json")
-    variant_counts = Counter(row["variant_type"] for row in rows)
     manifest = {
         "track": "romanbench",
         "construction_stage": "controlled_synthetic_candidates",
@@ -121,11 +93,11 @@ def main() -> None:
         "source_revision": source.revision,
         "source_license": source.license,
         "output_file": str(args.output),
-        "families": len(seen_controls),
-        "records": len(rows),
-        "variant_counts": dict(sorted(variant_counts.items())),
-        "source_records_scanned": source_records,
-        "rejected_sentences_or_records": rejected,
+        "families": stats.families,
+        "records": stats.records,
+        "variant_counts": stats.variant_counts,
+        "source_records_scanned": stats.source_records_scanned,
+        "rejected_sentences_or_records": stats.rejected_sentences_or_records,
         "bytes": bytes_written,
         "sha256": sha256_file(args.output),
         "pipeline_version": "romanbench-candidates-v1",
@@ -134,8 +106,8 @@ def main() -> None:
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"families={manifest['families']} records={manifest['records']} output={args.output}")
-    print(f"variants={manifest['variant_counts']}")
+    print(f"families={stats.families} records={stats.records} output={args.output}")
+    print(f"variants={stats.variant_counts}")
     print(f"manifest={manifest_path}")
 
 
