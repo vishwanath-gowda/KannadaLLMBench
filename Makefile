@@ -132,6 +132,7 @@ schemas:
 	$(PY) -m json.tool schemas/benchmark-item.schema.json >/dev/null
 	$(PY) -m json.tool schemas/dataset-manifest.schema.json >/dev/null
 	$(PY) -m json.tool schemas/romanbench-candidate.schema.json >/dev/null
+	$(PY) -m json.tool schemas/romanbench-manifest.schema.json >/dev/null
 
 clean:
 	rm -rf .pytest_cache .ruff_cache build dist *.egg-info src/*.egg-info
