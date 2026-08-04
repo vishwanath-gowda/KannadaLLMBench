@@ -11,12 +11,17 @@ MB ?= 5
 FAMILIES ?= 2000
 ROMAN_OUTPUT ?= data/interim/romanbench/candidates.jsonl
 ROMAN_REVIEW ?= data/interim/romanbench/review.csv
+AUTHORING_ROWS ?= 250
+ROMAN_AUTHORING ?= data/interim/romanbench/human_authoring.csv
+ROMAN_HUMAN_TASKS ?= data/interim/romanbench/human_romanization_tasks.csv
 
 .PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
 	data-sources registry-validate data-build-records data-build-mb data-slice \
 	transform contamination-check schemas romanbench-candidates romanbench-sample \
-	romanbench-review-export romanbench-review-validate
+	romanbench-review-export romanbench-review-validate romanbench-authoring-template \
+	romanbench-authoring-validate romanbench-human-romanization-export \
+	romanbench-human-romanization-validate
 
 help:
 	@echo "KannadaLLMBench targets"
@@ -35,6 +40,10 @@ help:
 	@echo "  make romanbench-sample      Build 100-family RomanBench development sample"
 	@echo "  make romanbench-review-export Export family-level CSV for Kannada-speaker review"
 	@echo "  make romanbench-review-validate Validate completed review CSV"
+	@echo "  make romanbench-authoring-template Create blank original-Kannada authoring sheet"
+	@echo "  make romanbench-authoring-validate Validate original-Kannada authoring sheet"
+	@echo "  make romanbench-human-romanization-export Export independent Romanization tasks"
+	@echo "  make romanbench-human-romanization-validate Validate completed natural Romanizations"
 	@echo "  make clean                  Remove caches/build artifacts (not source)"
 
 all: check build
@@ -117,6 +126,18 @@ romanbench-review-export:
 
 romanbench-review-validate:
 	$(PY) scripts/validate_romanbench_review.py $(ROMAN_REVIEW)
+
+romanbench-authoring-template:
+	$(PY) scripts/create_romanbench_authoring_template.py --rows $(AUTHORING_ROWS) --output $(ROMAN_AUTHORING)
+
+romanbench-authoring-validate:
+	$(PY) scripts/validate_romanbench_authoring.py $(ROMAN_AUTHORING)
+
+romanbench-human-romanization-export:
+	$(PY) scripts/export_romanbench_romanization_tasks.py $(ROMAN_AUTHORING) --output $(ROMAN_HUMAN_TASKS)
+
+romanbench-human-romanization-validate:
+	$(PY) scripts/validate_romanbench_romanizations.py $(ROMAN_HUMAN_TASKS)
 
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)
