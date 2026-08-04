@@ -7,7 +7,7 @@ import csv
 from collections import Counter
 from pathlib import Path
 
-from kannadallmbench.pipelines.romanbench_human import validate_authoring_row
+from kannadallmbench.pipelines.romanbench_human import is_unused_authoring_row, validate_authoring_row
 
 
 def main() -> None:
@@ -20,7 +20,7 @@ def main() -> None:
     with args.authoring_csv.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         for line_number, row in enumerate(reader, start=2):
-            if not any((value or "").strip() for value in row.values()):
+            if is_unused_authoring_row(row):
                 continue
             errors.extend(validate_authoring_row(row, line_number))
             decisions[row.get("review_decision", "").strip().lower() or "pending"] += 1
