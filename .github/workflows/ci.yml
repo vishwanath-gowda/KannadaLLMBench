@@ -20,6 +20,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[dev,metrics]'
+      - run: make install-dev
       - run: make check
+      - run: make build
