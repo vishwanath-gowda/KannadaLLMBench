@@ -4,7 +4,6 @@ import hashlib
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import Any
 
 from kannadallmbench.pipelines.transforms import kannada_character_ratio, normalize_text
 
@@ -58,9 +57,28 @@ def authoring_template_row(index: int) -> dict[str, str]:
     }
 
 
+def is_unused_authoring_row(row: dict[str, str]) -> bool:
+    """Return true for a preallocated template row that a contributor never started."""
+    user_fields = (
+        "kannada_control",
+        "domain",
+        "author_id",
+        "terms_accepted",
+        "original_work_confirmation",
+        "pii_reviewed",
+        "author_notes",
+        "review_decision",
+        "reviewer_id",
+        "review_notes",
+    )
+    return not any(row.get(field, "").strip() for field in user_fields)
+
+
 def validate_authoring_row(
     row: dict[str, str], line_number: int, policy: HumanCollectionPolicy | None = None
 ) -> list[str]:
+    if is_unused_authoring_row(row):
+        return []
     policy = policy or HumanCollectionPolicy()
     errors: list[str] = []
     prefix = f"line {line_number} ({row.get('submission_id', '').strip() or 'missing-id'})"
