@@ -9,7 +9,7 @@ DATA_OUTPUT ?= data/samples/$(DATA_SOURCE).jsonl
 RECORDS ?= 1000
 MB ?= 5
 
-.PHONY: help venv install install-dev install-all test lint format format-check check clean \
+.PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
 	data-sources registry-validate data-build-records data-build-mb data-slice \
 	transform contamination-check schemas
@@ -19,6 +19,8 @@ help:
 	@echo "  make venv                 Create virtualenv using active Python 3.12+"
 	@echo "  make install-dev          Install package + dev/metrics/data dependencies"
 	@echo "  make check                Registry validation + lint + tests + schemas"
+	@echo "  make build                Build wheel and source distribution"
+	@echo "  make all                  Run checks and build the package"
 	@echo "  make bootstrap-external   Clone pinned external benchmark repositories"
 	@echo "  make external-all         Prepare/run external benchmark commands"
 	@echo "  make data-sources         List data sources and approval status"
@@ -26,6 +28,8 @@ help:
 	@echo "  make data-build-mb        Build approved source, bounded by MB MiB"
 	@echo "  make data-slice           Generic HF slice (set DATASET/SPLIT/OUTPUT)"
 	@echo "  make clean                Remove caches/build artifacts (not source)"
+
+all: check build
 
 venv:
 	$(PYTHON) -m venv $(VENV)
@@ -38,6 +42,9 @@ install-dev: venv
 	$(PIP) install -e '.[dev,metrics,data]'
 
 install-all: install-dev
+
+build:
+	$(PYTHON) -m build
 
 registry-validate:
 	$(PYTHON) scripts/validate_registry.py
