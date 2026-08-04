@@ -8,16 +8,18 @@ DATA_SOURCE ?= indiccorp_v2_kannada
 DATA_OUTPUT ?= data/samples/$(DATA_SOURCE).jsonl
 RECORDS ?= 1000
 MB ?= 5
+FAMILIES ?= 2000
+ROMAN_OUTPUT ?= data/interim/romanbench/candidates.jsonl
 
 .PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
 	data-sources registry-validate data-build-records data-build-mb data-slice \
-	transform contamination-check schemas
+	transform contamination-check schemas romanbench-candidates romanbench-sample
 
 help:
 	@echo "KannadaLLMBench targets"
 	@echo "  make venv                 Create .venv using active Python 3.12+"
-	@echo "  make install-dev          Install package + dev/metrics/data dependencies into .venv"
+	@echo "  make install-dev          Install package + dev/metrics/data/RomanBench dependencies"
 	@echo "  make check                Registry validation + lint + tests + schemas"
 	@echo "  make build                Build wheel and source distribution"
 	@echo "  make all                  Run checks and build the package"
@@ -27,6 +29,8 @@ help:
 	@echo "  make data-build-records   Build approved source, bounded by RECORDS"
 	@echo "  make data-build-mb        Build approved source, bounded by MB MiB"
 	@echo "  make data-slice           Generic HF slice (set DATASET/SPLIT/OUTPUT)"
+	@echo "  make romanbench-candidates Build controlled RomanBench candidate families"
+	@echo "  make romanbench-sample    Build 100-family RomanBench development sample"
 	@echo "  make clean                Remove caches/build artifacts (not source)"
 
 all: check build
@@ -39,7 +43,7 @@ install: venv
 	$(PIP) install -e .
 
 install-dev: venv
-	$(PIP) install -e '.[dev,metrics,data]'
+	$(PIP) install -e '.[dev,metrics,data,romanbench]'
 
 install-all: install-dev
 
@@ -97,6 +101,13 @@ data-slice:
 	@test -n "$(DATASET)" || (echo "DATASET is required" && exit 2)
 	$(PY) scripts/slice_dataset.py $(DATASET) --split $(SPLIT) --records $(RECORDS) --output $(OUTPUT)
 
+romanbench-candidates:
+	$(PY) scripts/build_romanbench_candidates.py --source-key $(DATA_SOURCE) --families $(FAMILIES) --output $(ROMAN_OUTPUT)
+
+romanbench-sample:
+	$(PY) scripts/build_romanbench_candidates.py --source-key $(DATA_SOURCE) --families 100 \
+		--output data/interim/romanbench/sample.jsonl
+
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)
 	$(PY) scripts/transform_dataset.py $(INPUT) $(OUTPUT) --text-field text --dedup-field text
@@ -110,6 +121,7 @@ contamination-check:
 schemas:
 	$(PY) -m json.tool schemas/benchmark-item.schema.json >/dev/null
 	$(PY) -m json.tool schemas/dataset-manifest.schema.json >/dev/null
+	$(PY) -m json.tool schemas/romanbench-candidate.schema.json >/dev/null
 
 clean:
 	rm -rf .pytest_cache .ruff_cache build dist *.egg-info src/*.egg-info
