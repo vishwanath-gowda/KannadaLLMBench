@@ -6,7 +6,11 @@ import argparse
 import csv
 from pathlib import Path
 
-from kannadallmbench.pipelines.romanbench_human import romanization_task_rows, validate_authoring_row
+from kannadallmbench.pipelines.romanbench_human import (
+    is_unused_authoring_row,
+    romanization_task_rows,
+    validate_authoring_row,
+)
 
 DEFAULT_OUTPUT = Path("data/interim/romanbench/human_romanization_tasks.csv")
 
@@ -23,7 +27,7 @@ def main() -> None:
     with args.authoring_csv.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         for line_number, row in enumerate(reader, start=2):
-            if not any((value or "").strip() for value in row.values()):
+            if is_unused_authoring_row(row):
                 continue
             row_errors = validate_authoring_row(row, line_number)
             errors.extend(row_errors)
