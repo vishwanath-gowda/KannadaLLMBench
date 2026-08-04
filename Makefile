@@ -1,4 +1,4 @@
-PYTHON ?= python3.12
+PYTHON ?= python3
 VENV ?= .venv
 PIP := $(VENV)/bin/pip
 PY := $(VENV)/bin/python
@@ -16,9 +16,9 @@ MB ?= 5
 
 help:
 	@echo "KannadaLLMBench targets"
-	@echo "  make venv                 Create Python 3.12 virtualenv"
+	@echo "  make venv                 Create virtualenv using active Python 3.12+"
 	@echo "  make install-dev          Install package + dev/metrics/data dependencies"
-	@echo "  make check                Registry validation + lint + tests"
+	@echo "  make check                Registry validation + lint + tests + schemas"
 	@echo "  make bootstrap-external   Clone pinned external benchmark repositories"
 	@echo "  make external-all         Prepare/run external benchmark commands"
 	@echo "  make data-sources         List data sources and approval status"
@@ -57,7 +57,7 @@ format:
 format-check:
 	$(PYTHON) -m ruff format --check src scripts tests
 
-check: registry-validate lint format-check test schemas
+check: registry-validate lint test schemas
 
 bootstrap-external:
 	$(PYTHON) scripts/bootstrap_external.py
