@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kannadallmbench"
+version = "0.1.0"
+description = "Kannada-first LLM evaluation suite and leaderboard infrastructure"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "KannadaLLMBench contributors"}]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+metrics = ["sacrebleu>=2.4,<3", "rouge-score>=0.1.2,<1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

@@ -1,0 +1,22 @@
+{
+  "benchmarks": {
+    "milu": {
+      "name": "MILU",
+      "repository": "https://github.com/AI4Bharat/MILU.git",
+      "revision": "7d8e6c9102bf44ae9f9ee84cfabefb4cb8fa2e88",
+      "license": "CC-BY-4.0"
+    },
+    "indicifeval": {
+      "name": "IndicIFEval",
+      "repository": "https://github.com/AI4Bharat/IndicIFEval.git",
+      "revision": "94fca1c013dcb7624cc3d6993c31ab2f9b160f0d",
+      "license": "CC-BY-4.0"
+    },
+    "indicgenbench": {
+      "name": "IndicGenBench",
+      "repository": "https://github.com/google-research-datasets/indic-gen-bench.git",
+      "revision": "c96a10d90ed9b38cc2108cac6f515a1b8bfdc230",
+      "license": "mixed; see docs/external-benchmarks.md"
+    }
+  }
+}

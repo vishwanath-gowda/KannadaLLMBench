@@ -1,0 +1,9 @@
+.external/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/external/
+results/**/*.json
+results/**/*.jsonl
+.DS_Store
