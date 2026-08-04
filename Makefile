@@ -1,7 +1,7 @@
-PYTHON ?= python3
+BASE_PYTHON ?= python3
 VENV ?= .venv
-PIP := $(VENV)/bin/pip
 PY := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
 MODEL ?= google/gemma-3-4b-it
 RESULTS ?= results
 DATA_SOURCE ?= indiccorp_v2_kannada
@@ -16,8 +16,8 @@ MB ?= 5
 
 help:
 	@echo "KannadaLLMBench targets"
-	@echo "  make venv                 Create virtualenv using active Python 3.12+"
-	@echo "  make install-dev          Install package + dev/metrics/data dependencies"
+	@echo "  make venv                 Create .venv using active Python 3.12+"
+	@echo "  make install-dev          Install package + dev/metrics/data dependencies into .venv"
 	@echo "  make check                Registry validation + lint + tests + schemas"
 	@echo "  make build                Build wheel and source distribution"
 	@echo "  make all                  Run checks and build the package"
@@ -32,7 +32,7 @@ help:
 all: check build
 
 venv:
-	$(PYTHON) -m venv $(VENV)
+	$(BASE_PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
 
 install: venv
@@ -44,73 +44,73 @@ install-dev: venv
 install-all: install-dev
 
 build:
-	$(PYTHON) -m build
+	$(PY) -m build
 
 registry-validate:
-	$(PYTHON) scripts/validate_registry.py
+	$(PY) scripts/validate_registry.py
 
 data-sources:
-	$(PYTHON) scripts/list_data_sources.py
+	$(PY) scripts/list_data_sources.py
 
 test:
-	$(PYTHON) -m pytest -q
+	$(PY) -m pytest -q
 
 lint:
-	$(PYTHON) -m ruff check src scripts tests
+	$(PY) -m ruff check src scripts tests
 
 format:
-	$(PYTHON) -m ruff format src scripts tests
+	$(PY) -m ruff format src scripts tests
 
 format-check:
-	$(PYTHON) -m ruff format --check src scripts tests
+	$(PY) -m ruff format --check src scripts tests
 
 check: registry-validate lint test schemas
 
 bootstrap-external:
-	$(PYTHON) scripts/bootstrap_external.py
+	$(PY) scripts/bootstrap_external.py
 
 milu:
-	$(PYTHON) scripts/run_external.py milu --model $(MODEL) --output $(RESULTS)/$(MODEL)/milu
+	$(PY) scripts/run_external.py milu --model $(MODEL) --output $(RESULTS)/$(MODEL)/milu
 
 indicifeval:
-	$(PYTHON) scripts/run_external.py indicifeval --model $(MODEL) --output $(RESULTS)/$(MODEL)/indicifeval
+	$(PY) scripts/run_external.py indicifeval --model $(MODEL) --output $(RESULTS)/$(MODEL)/indicifeval
 
 indicgenbench-dev:
-	$(PYTHON) scripts/prepare_indicgenbench.py --task crosssum --split dev
-	$(PYTHON) scripts/prepare_indicgenbench.py --task flores_en_kn --split dev
-	$(PYTHON) scripts/prepare_indicgenbench.py --task flores_kn_en --split dev
-	$(PYTHON) scripts/prepare_indicgenbench.py --task xquad --split dev
-	$(PYTHON) scripts/prepare_indicgenbench.py --task xorqa --split dev
+	$(PY) scripts/prepare_indicgenbench.py --task crosssum --split dev
+	$(PY) scripts/prepare_indicgenbench.py --task flores_en_kn --split dev
+	$(PY) scripts/prepare_indicgenbench.py --task flores_kn_en --split dev
+	$(PY) scripts/prepare_indicgenbench.py --task xquad --split dev
+	$(PY) scripts/prepare_indicgenbench.py --task xorqa --split dev
 
 external-all: milu indicifeval indicgenbench-dev
 
 data-build-records:
-	$(PYTHON) scripts/build_dataset.py $(DATA_SOURCE) --output $(DATA_OUTPUT) --text-field text --dedup-field text --records $(RECORDS)
+	$(PY) scripts/build_dataset.py $(DATA_SOURCE) --output $(DATA_OUTPUT) --text-field text --dedup-field text --records $(RECORDS)
 
 data-build-mb:
-	$(PYTHON) scripts/build_dataset.py $(DATA_SOURCE) --output $(DATA_OUTPUT) --text-field text --dedup-field text --mb $(MB)
+	$(PY) scripts/build_dataset.py $(DATA_SOURCE) --output $(DATA_OUTPUT) --text-field text --dedup-field text --mb $(MB)
 
 DATASET ?=
 SPLIT ?= train
 OUTPUT ?= data/samples/slice.jsonl
 data-slice:
 	@test -n "$(DATASET)" || (echo "DATASET is required" && exit 2)
-	$(PYTHON) scripts/slice_dataset.py $(DATASET) --split $(SPLIT) --records $(RECORDS) --output $(OUTPUT)
+	$(PY) scripts/slice_dataset.py $(DATASET) --split $(SPLIT) --records $(RECORDS) --output $(OUTPUT)
 
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)
-	$(PYTHON) scripts/transform_dataset.py $(INPUT) $(OUTPUT) --text-field text --dedup-field text
+	$(PY) scripts/transform_dataset.py $(INPUT) $(OUTPUT) --text-field text --dedup-field text
 
 contamination-check:
 	@test -n "$(TRAINING)" || (echo "TRAINING is required" && exit 2)
 	@test -n "$(BENCHMARK)" || (echo "BENCHMARK is required" && exit 2)
-	$(PYTHON) scripts/check_contamination.py --training $(TRAINING) --benchmark $(BENCHMARK) \
+	$(PY) scripts/check_contamination.py --training $(TRAINING) --benchmark $(BENCHMARK) \
 		--training-field $(TRAINING_FIELD) --benchmark-field $(BENCHMARK_FIELD) --fail-on-overlap
 
 schemas:
-	$(PYTHON) -m json.tool schemas/benchmark-item.schema.json >/dev/null
-	$(PYTHON) -m json.tool schemas/dataset-manifest.schema.json >/dev/null
+	$(PY) -m json.tool schemas/benchmark-item.schema.json >/dev/null
+	$(PY) -m json.tool schemas/dataset-manifest.schema.json >/dev/null
 
 clean:
-	rm -rf .pytest_cache .ruff_cache build dist *.egg-info
+	rm -rf .pytest_cache .ruff_cache build dist *.egg-info src/*.egg-info
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
