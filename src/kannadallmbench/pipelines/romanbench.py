@@ -54,10 +54,10 @@ class RomanBenchFilter:
 
 def split_candidate_sentences(text: str) -> list[str]:
     """Split corpus text conservatively without language-model rewriting."""
-    normalized = normalize_text(text.replace("\r", "\n"))
-    if not normalized:
+    value = unicodedata.normalize("NFC", text.replace("\r\n", "\n").replace("\r", "\n"))
+    if not value.strip():
         return []
-    return [normalize_text(match.group(0)) for match in _SENTENCE_RE.finditer(normalized) if match.group(0).strip()]
+    return [normalize_text(match.group(0)) for match in _SENTENCE_RE.finditer(value) if match.group(0).strip()]
 
 
 def is_candidate_sentence(text: str, config: RomanBenchFilter | None = None) -> bool:
@@ -112,11 +112,11 @@ def relax_ascii_spelling(text: str) -> str:
 def romanization_variants(kannada_text: str) -> dict[str, str]:
     iast = to_iast(kannada_text)
     ascii_phonemic = iast_to_ascii_phonemic(iast)
-    return {
-        "iast": iast,
-        "ascii_phonemic": ascii_phonemic,
-        "ascii_relaxed": relax_ascii_spelling(ascii_phonemic),
-    }
+    variants = {"iast": iast, "ascii_phonemic": ascii_phonemic}
+    relaxed = relax_ascii_spelling(ascii_phonemic)
+    if relaxed != ascii_phonemic:
+        variants["ascii_relaxed"] = relaxed
+    return variants
 
 
 def stable_family_id(source: DataSource, kannada_text: str) -> str:
