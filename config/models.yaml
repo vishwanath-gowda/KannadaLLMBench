@@ -1,0 +1,13 @@
+version: 1
+models:
+  qwen3_4b_instruct_2507_mlx_4bit:
+    model_id: mlx-community/Qwen3-4B-Instruct-2507-4bit
+    base_model: Qwen/Qwen3-4B-Instruct-2507
+    backend: mlx
+    license: Apache-2.0
+    quantization: 4bit
+    role: local_mac_baseline
+    notes: >-
+      First recommended local Apple Silicon baseline. The Hugging Face model card
+      states this MLX artifact was converted from Qwen/Qwen3-4B-Instruct-2507
+      using mlx-lm and retains the base model's Apache-2.0 license.
