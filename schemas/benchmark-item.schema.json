@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kannadallmbench.org/schemas/benchmark-item.schema.json",
+  "title": "KannadaLLMBench benchmark item",
+  "type": "object",
+  "required": ["id", "track", "task", "prompt", "split", "provenance"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "track": {"type": "string", "minLength": 1},
+    "task": {"type": "string", "minLength": 1},
+    "prompt": {"type": "string", "minLength": 1},
+    "reference": {},
+    "choices": {"type": "array", "items": {"type": "string"}},
+    "semantic_family_id": {"type": ["string", "null"]},
+    "language": {"type": "string", "default": "kn"},
+    "script": {"type": ["string", "null"]},
+    "split": {"enum": ["train", "dev", "validation", "test", "private_test"]},
+    "provenance": {
+      "type": "object",
+      "required": ["source_type", "license_basis"],
+      "properties": {
+        "source_type": {"type": "string"},
+        "source_id": {"type": ["string", "null"]},
+        "source_revision": {"type": ["string", "null"]},
+        "license_basis": {"type": "string"},
+        "human_reviewed": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
