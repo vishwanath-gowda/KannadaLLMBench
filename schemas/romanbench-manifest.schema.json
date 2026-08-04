@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kannadallmbench.org/schemas/romanbench-manifest.schema.json",
+  "title": "RomanBench controlled-candidate manifest",
+  "type": "object",
+  "required": [
+    "track",
+    "construction_stage",
+    "source_key",
+    "dataset_id",
+    "source_revision",
+    "source_license",
+    "output_file",
+    "families",
+    "records",
+    "variant_counts",
+    "source_records_scanned",
+    "bytes",
+    "sha256",
+    "pipeline_version",
+    "filter",
+    "review_status",
+    "created_at"
+  ],
+  "properties": {
+    "track": {"const": "romanbench"},
+    "construction_stage": {"const": "controlled_synthetic_candidates"},
+    "source_key": {"type": "string"},
+    "dataset_id": {"type": "string"},
+    "source_revision": {"type": ["string", "null"]},
+    "source_license": {"type": "string"},
+    "output_file": {"type": "string"},
+    "families": {"type": "integer", "minimum": 1},
+    "records": {"type": "integer", "minimum": 1},
+    "variant_counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "source_records_scanned": {"type": "integer", "minimum": 1},
+    "rejected_sentences_or_records": {"type": "integer", "minimum": 0},
+    "bytes": {"type": "integer", "minimum": 1},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pipeline_version": {"type": "string"},
+    "filter": {"type": "object"},
+    "review_status": {"const": "pending"},
+    "created_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}
