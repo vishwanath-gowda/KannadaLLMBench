@@ -9,7 +9,7 @@ from typing import Any
 from kannadallmbench.data_registry import DataSource
 from kannadallmbench.pipelines.transforms import kannada_character_ratio, normalize_text
 
-_SENTENCE_RE = re.compile(r"[^.!?।॥\n]+(?:[.!?।॥]+|$)")
+_SENTENCE_RE = re.compile(r"[^.!?।॥\n]+(?:[.!?।॥]+|(?=\n)|$)")
 _URL_OR_EMAIL_RE = re.compile(r"(?:https?://|www\.|\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b)", re.IGNORECASE)
 _REPEAT_RE = re.compile(r"(.)\1{5,}")
 _KANNADA_RE = re.compile(r"[\u0C80-\u0CFF]")
