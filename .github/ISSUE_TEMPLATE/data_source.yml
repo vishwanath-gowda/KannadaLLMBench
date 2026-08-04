@@ -1,0 +1,42 @@
+name: Data source review
+description: Review a dataset before allowing it in project pipelines
+title: "[Data source] "
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Dataset/source
+      placeholder: organization/dataset
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Immutable revision/tag
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: Claimed license
+    validations:
+      required: true
+  - type: textarea
+    id: provenance
+    attributes:
+      label: Provenance and upstream lineage
+      description: Who created it, how, and what are the underlying sources?
+    validations:
+      required: true
+  - type: textarea
+    id: rights
+    attributes:
+      label: Redistribution / derivative-work analysis
+    validations:
+      required: true
+  - type: textarea
+    id: contamination
+    attributes:
+      label: Benchmark overlap risk
+    validations:
+      required: true
