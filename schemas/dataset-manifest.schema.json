@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KannadaLLMBench derived dataset manifest",
+  "type": "object",
+  "required": ["source_key", "dataset_id", "source_license", "output_file", "records", "bytes", "sha256", "pipeline_version", "created_at"],
+  "properties": {
+    "source_key": {"type": "string"},
+    "dataset_id": {"type": "string"},
+    "source_revision": {"type": ["string", "null"]},
+    "source_license": {"type": "string"},
+    "output_file": {"type": "string"},
+    "records": {"type": "integer", "minimum": 0},
+    "bytes": {"type": "integer", "minimum": 0},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "pipeline_version": {"type": "string"},
+    "created_at": {"type": "string"}
+  },
+  "additionalProperties": false
+}

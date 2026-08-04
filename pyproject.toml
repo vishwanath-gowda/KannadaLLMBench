@@ -1,23 +1,33 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=75", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kannadallmbench"
-version = "0.1.0"
-description = "Kannada-first LLM evaluation suite and leaderboard infrastructure"
+version = "0.2.0"
+description = "Kannada-first LLM evaluation suite, data pipelines, and leaderboard infrastructure"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 authors = [{name = "KannadaLLMBench contributors"}]
-dependencies = []
+dependencies = ["PyYAML>=6.0.2,<7"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+data = ["datasets>=3.2,<5", "huggingface-hub>=0.27,<1"]
 metrics = ["sacrebleu>=2.4,<3", "rouge-score>=0.1.2,<1"]
+mlx = ["mlx-lm>=0.26.2; platform_system == 'Darwin'"]
+dev = ["build>=1.2,<2", "pytest>=8.3,<9", "ruff>=0.9,<1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

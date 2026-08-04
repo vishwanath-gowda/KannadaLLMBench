@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible problem in code, pipeline, or evaluation
+title: "[Bug] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Include commands, revisions, backend/model metadata, and minimal logs. Do not paste private benchmark examples.
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.8"
+  - type: textarea
+    id: impact
+    attributes:
+      label: Benchmark/data impact
+      description: Could this affect scores, data integrity, leakage, or licensing?
