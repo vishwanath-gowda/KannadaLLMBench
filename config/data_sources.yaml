@@ -57,6 +57,9 @@ sources:
     citation_url: https://arxiv.org/abs/2205.03018
     tags: [transliteration, romanization, mixed-license]
     notes: >-
-      Useful for RomanBench research, but licensing is partition-dependent and
-      historical Hub metadata has been inconsistent. Do not use wholesale. Review
-      source labels and retain only a clearly licensed partition before approval.
+      The current dataset card states that manually collected rows are CC-BY while
+      mined rows from Samanantar/IndicCorp and existing-source rows are CC0. It also
+      states that AI4Bharat does not own the underlying text from which mined data
+      was extracted. Do not use the aggregate dataset wholesale. A future approval
+      must filter by row source, pin the exact revision, and document the selected
+      source classes and license basis explicitly.

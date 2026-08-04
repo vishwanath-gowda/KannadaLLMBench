@@ -11,6 +11,7 @@ __pycache__/
 # Downloaded/generated data is private/local until explicitly reviewed.
 data/raw/
 data/samples/
+data/interim/
 data/processed/
 data/external/
 data/releases/*

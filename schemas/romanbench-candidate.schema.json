@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kannadallmbench.org/schemas/romanbench-candidate.schema.json",
+  "title": "RomanBench controlled candidate",
+  "type": "object",
+  "required": [
+    "id",
+    "semantic_family_id",
+    "track",
+    "task",
+    "kannada_control",
+    "roman_input",
+    "reference_answer",
+    "variant_type",
+    "romanization_source",
+    "author_type",
+    "review_status",
+    "split",
+    "provenance"
+  ],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "semantic_family_id": {"type": "string", "minLength": 1},
+    "track": {"const": "romanbench"},
+    "task": {"const": "transliteration_normalization"},
+    "kannada_control": {"type": "string", "minLength": 1},
+    "roman_input": {"type": "string", "minLength": 1},
+    "reference_answer": {"type": "string", "minLength": 1},
+    "variant_type": {"enum": ["iast", "ascii_phonemic", "ascii_relaxed"]},
+    "romanization_source": {"const": "synthetic_controlled"},
+    "author_type": {"const": "automatic"},
+    "review_status": {"enum": ["pending", "accepted", "rejected"]},
+    "split": {"const": "candidate"},
+    "provenance": {
+      "type": "object",
+      "required": [
+        "source_type",
+        "source_key",
+        "source_id",
+        "source_revision",
+        "source_record_index",
+        "sentence_index",
+        "license_basis",
+        "human_reviewed"
+      ],
+      "properties": {
+        "source_type": {"const": "permissive_public_corpus"},
+        "source_key": {"type": "string"},
+        "source_id": {"type": "string"},
+        "source_revision": {"type": ["string", "null"]},
+        "source_record_index": {"type": "integer", "minimum": 0},
+        "sentence_index": {"type": "integer", "minimum": 0},
+        "license_basis": {"type": "string"},
+        "human_reviewed": {"const": false}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

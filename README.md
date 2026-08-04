@@ -4,7 +4,7 @@
 
 The project combines established external Kannada benchmarks with new Kannada-native tracks for Romanized Kannada, colloquial/spoken Kannada, Kannada-English code mixing, Karnataka-specific context, and conversational naturalness. It also provides reproducible, license-aware data pipelines for training and fine-tuning Kannada models without contaminating evaluation sets.
 
-> **Status:** Foundation + external reference integrations are implemented. The first original Kannada-native benchmark and public leaderboard are next.
+> **Status:** Foundation + external reference integrations are implemented. RomanBench v0.1 controlled candidate-data construction is implemented; human review and natural Roman variants are the next data step.
 
 ## Principles
 
@@ -15,6 +15,7 @@ The project combines established external Kannada benchmarks with new Kannada-na
 - **No benchmark leakage.** Evaluation data is never training data.
 - **Reproducible results.** Pin dataset/model revisions and emit manifests/hashes.
 - **Backend independent.** MLX on Apple Silicon, Transformers, vLLM, or APIs can feed the same evaluation contracts.
+- **Synthetic is labeled synthetic.** Generated Romanization variants are construction candidates, not natural-language gold.
 
 ## Benchmark map
 
@@ -30,7 +31,7 @@ The project combines established external Kannada benchmarks with new Kannada-na
 
 | Track | Focus | Status |
 |---|---|---|
-| RomanBench | informal Romanized Kannada and spelling variation | v0.1 design complete |
+| RomanBench | Romanized Kannada and spelling variation | controlled candidate pipeline implemented |
 | ColloquialBench | natural spoken-style Kannada | planned |
 | KanMixBench | Kannada-English code/script mixing | separate project; integration contract defined |
 | CultureBench | Karnataka-specific cultural/context understanding | planned |
@@ -47,7 +48,7 @@ See [`docs/benchmark-taxonomy.md`](docs/benchmark-taxonomy.md).
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -e '.[dev,metrics,data]'
+pip install -e '.[dev,metrics,data,romanbench]'
 make check
 ```
 
@@ -69,7 +70,7 @@ KannadaLLMBench/
 ├── schemas/                    # stable benchmark/data contracts
 ├── scripts/                    # CLI entrypoints and project operations
 ├── src/kannadallmbench/
-│   ├── pipelines/              # reusable data transforms
+│   ├── pipelines/              # reusable data transforms + RomanBench construction
 │   ├── contamination.py
 │   ├── data_registry.py
 │   ├── registry.py
@@ -82,14 +83,40 @@ KannadaLLMBench/
 
 `config/data_sources.yaml` is the gatekeeper. Sources are `approved`, `review_required`, or `blocked`.
 
-The first approved default training corpus is **AI4Bharat IndicCorpV2 Kannada**, pinned to a specific revision and recorded as CC0. Candidate sources such as Aya, English-Kannada cleaned pairs, and Aksharantar remain review-gated until the exact subsets' provenance/licensing is acceptable.
+The first approved default corpus is **AI4Bharat IndicCorpV2 Kannada**, pinned to a specific revision and recorded as CC0. Candidate sources such as Aya, English-Kannada cleaned pairs, and Aksharantar remain review-gated until the exact subsets' provenance/licensing is acceptable.
 
 ```bash
 make data-sources
 make registry-validate
 ```
 
-Read [`docs/data-governance.md`](docs/data-governance.md) before approving a new source.
+Read [`docs/data-governance.md`](docs/data-governance.md) and [`docs/source-audit.md`](docs/source-audit.md) before approving a new source.
+
+## Construct RomanBench candidate data
+
+RomanBench v0.1 currently starts with a controlled transliteration/normalization track. It streams approved Kannada text, extracts clean sentence candidates, assigns stable semantic-family IDs, and generates multiple explicitly synthetic Roman variants:
+
+- scholarly IAST baseline;
+- ASCII phonemic form that preserves vowel length with doubled vowels;
+- a deterministic relaxed ASCII form that removes selected vowel-length distinctions when that produces a distinct variant.
+
+Build 2,000 candidate families:
+
+```bash
+make romanbench-candidates FAMILIES=2000
+```
+
+Build a small development sample:
+
+```bash
+make romanbench-sample
+```
+
+Outputs go under `data/interim/romanbench/` and remain Git-ignored. Each row carries source ID, pinned revision, license basis, source-record location, `review_status=pending`, and `split=candidate`. A sidecar manifest records construction parameters, counts, SHA-256, and the actual variant distribution.
+
+**These are not benchmark gold.** Natural Roman Kannada requires Kannada-speaker review or human-authored variants before promotion to a public test split.
+
+See [`docs/romanbench-data-construction.md`](docs/romanbench-data-construction.md) and [`docs/romanbench-v0.1.md`](docs/romanbench-v0.1.md).
 
 ## Slice a Hugging Face dataset without downloading all of it
 
@@ -204,6 +231,8 @@ Run `make help`. Important targets include:
 - `make registry-validate`
 - `make data-build-records`
 - `make data-build-mb`
+- `make romanbench-candidates`
+- `make romanbench-sample`
 - `make bootstrap-external`
 - `make milu`
 - `make indicifeval`
@@ -214,9 +243,11 @@ Run `make help`. Important targets include:
 - [Architecture](docs/architecture.md)
 - [Benchmark taxonomy](docs/benchmark-taxonomy.md)
 - [Data governance](docs/data-governance.md)
+- [Source audit](docs/source-audit.md)
 - [Contamination policy](docs/contamination-policy.md)
 - [External benchmarks](docs/external-benchmarks.md)
 - [RomanBench v0.1 design](docs/romanbench-v0.1.md)
+- [RomanBench data construction](docs/romanbench-data-construction.md)
 - [KanMixBench integration](docs/kanmixbench-integration.md)
 - [Reproducibility](docs/reproducibility.md)
 - [Development](docs/development.md)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kannadallmbench"
-version = "0.2.0"
+version = "0.3.0"
 description = "Kannada-first LLM evaluation suite, data pipelines, and leaderboard infrastructure"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,6 +14,7 @@ dependencies = ["PyYAML>=6.0.2,<7"]
 
 [project.optional-dependencies]
 data = ["datasets>=3.2,<5", "huggingface-hub>=0.27,<1"]
+romanbench = ["indic-transliteration>=2.3.82,<3"]
 metrics = ["sacrebleu>=2.4,<3", "rouge-score>=0.1.2,<1"]
 mlx = ["mlx-lm>=0.26.2; platform_system == 'Darwin'"]
 dev = ["build>=1.2,<2", "pytest>=8.3,<9", "ruff>=0.9,<1"]
