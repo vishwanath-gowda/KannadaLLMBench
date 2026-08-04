@@ -10,28 +10,32 @@ RECORDS ?= 1000
 MB ?= 5
 FAMILIES ?= 2000
 ROMAN_OUTPUT ?= data/interim/romanbench/candidates.jsonl
+ROMAN_REVIEW ?= data/interim/romanbench/review.csv
 
 .PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
 	data-sources registry-validate data-build-records data-build-mb data-slice \
-	transform contamination-check schemas romanbench-candidates romanbench-sample
+	transform contamination-check schemas romanbench-candidates romanbench-sample \
+	romanbench-review-export romanbench-review-validate
 
 help:
 	@echo "KannadaLLMBench targets"
-	@echo "  make venv                 Create .venv using active Python 3.12+"
-	@echo "  make install-dev          Install package + dev/metrics/data/RomanBench dependencies"
-	@echo "  make check                Registry validation + lint + tests + schemas"
-	@echo "  make build                Build wheel and source distribution"
-	@echo "  make all                  Run checks and build the package"
-	@echo "  make bootstrap-external   Clone pinned external benchmark repositories"
-	@echo "  make external-all         Prepare/run external benchmark commands"
-	@echo "  make data-sources         List data sources and approval status"
-	@echo "  make data-build-records   Build approved source, bounded by RECORDS"
-	@echo "  make data-build-mb        Build approved source, bounded by MB MiB"
-	@echo "  make data-slice           Generic HF slice (set DATASET/SPLIT/OUTPUT)"
-	@echo "  make romanbench-candidates Build controlled RomanBench candidate families"
-	@echo "  make romanbench-sample    Build 100-family RomanBench development sample"
-	@echo "  make clean                Remove caches/build artifacts (not source)"
+	@echo "  make venv                   Create .venv using active Python 3.12+"
+	@echo "  make install-dev            Install package + dev/metrics/data/RomanBench dependencies"
+	@echo "  make check                  Registry validation + lint + tests + schemas"
+	@echo "  make build                  Build wheel and source distribution"
+	@echo "  make all                    Run checks and build the package"
+	@echo "  make bootstrap-external     Clone pinned external benchmark repositories"
+	@echo "  make external-all           Prepare/run external benchmark commands"
+	@echo "  make data-sources           List data sources and approval status"
+	@echo "  make data-build-records     Build approved source, bounded by RECORDS"
+	@echo "  make data-build-mb          Build approved source, bounded by MB MiB"
+	@echo "  make data-slice             Generic HF slice (set DATASET/SPLIT/OUTPUT)"
+	@echo "  make romanbench-candidates  Build controlled RomanBench candidate families"
+	@echo "  make romanbench-sample      Build 100-family RomanBench development sample"
+	@echo "  make romanbench-review-export Export family-level CSV for Kannada-speaker review"
+	@echo "  make romanbench-review-validate Validate completed review CSV"
+	@echo "  make clean                  Remove caches/build artifacts (not source)"
 
 all: check build
 
@@ -107,6 +111,12 @@ romanbench-candidates:
 romanbench-sample:
 	$(PY) scripts/build_romanbench_candidates.py --source-key $(DATA_SOURCE) --families 100 \
 		--output data/interim/romanbench/sample.jsonl
+
+romanbench-review-export:
+	$(PY) scripts/export_romanbench_review.py --input $(ROMAN_OUTPUT) --output $(ROMAN_REVIEW)
+
+romanbench-review-validate:
+	$(PY) scripts/validate_romanbench_review.py $(ROMAN_REVIEW)
 
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)
