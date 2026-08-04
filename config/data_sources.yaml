@@ -6,7 +6,6 @@ sources:
     dataset_id: ai4bharat/IndicCorpV2
     config_name: indiccorp_v2
     split: kan_Knda
-    data_dir: data/kan_Knda
     revision: 984b75b20ce408f9ba27c6558e9279e8e1b6edfd
     license: CC0-1.0
     status: approved
@@ -18,8 +17,8 @@ sources:
       text: text
     notes: >-
       Preferred default corpus source. AI4Bharat states that datasets created as
-      part of IndicCorpV2 are released under CC0. Keep the pinned revision in all
-      derived manifests.
+      part of IndicCorpV2 are released under CC0. The pinned dataset metadata maps
+      Kannada to split kan_Knda and data/kn.txt; keep the revision in derived manifests.
 
   aya_collection:
     name: Aya Collection
