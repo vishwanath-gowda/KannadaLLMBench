@@ -1,0 +1,37 @@
+name: Benchmark proposal
+description: Propose a new Kannada-native task, track, or metric
+title: "[Benchmark] "
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: Capability gap
+      description: What Kannada capability is not adequately measured today?
+    validations:
+      required: true
+  - type: textarea
+    id: existing
+    attributes:
+      label: Existing benchmarks checked
+      description: Explain why MILU, IndicIFEval, IndicGenBench, KanMixBench, or other existing work does not cover the gap.
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data and provenance plan
+      description: Candidate sources, licenses, human authoring/review, expected size.
+    validations:
+      required: true
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Task contract and metrics
+    validations:
+      required: true
+  - type: textarea
+    id: leakage
+    attributes:
+      label: Leakage/contamination plan
+    validations:
+      required: true
