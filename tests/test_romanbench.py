@@ -1,7 +1,10 @@
+import pytest
+
 from kannadallmbench.data_registry import DataSource
 from kannadallmbench.pipelines.romanbench import (
     RomanBenchFilter,
     build_candidate_rows,
+    construct_candidate_dataset,
     contains_kannada,
     iast_to_ascii_phonemic,
     is_candidate_sentence,
@@ -12,13 +15,13 @@ from kannadallmbench.pipelines.romanbench import (
 )
 
 
-def source() -> DataSource:
+def source(status: str = "approved") -> DataSource:
     return DataSource(
         key="fixture",
         name="Fixture",
         dataset_id="example/kannada",
         license="CC0-1.0",
-        status="approved",
+        status=status,
         revision="abc123",
         provenance_url="https://example.test",
     )
@@ -74,3 +77,30 @@ def test_candidate_rows_share_family_and_preserve_provenance() -> None:
     assert all(row["split"] == "candidate" for row in rows)
     assert all(row["provenance"]["source_revision"] == "abc123" for row in rows)
     assert all(row["provenance"]["human_reviewed"] is False for row in rows)
+
+
+def test_construct_candidate_dataset_is_bounded_and_deduplicated() -> None:
+    records = [
+        {"text": "ಇದು ಪರೀಕ್ಷೆಗೆ ಬಳಸುವ ಮೊದಲ ಸರಳ ಕನ್ನಡ ವಾಕ್ಯವಾಗಿದೆ. ಇದು ಇನ್ನೊಂದು ಸರಳ ಕನ್ನಡ ವಾಕ್ಯವಾಗಿದೆ."},
+        {"text": "ಇದು ಪರೀಕ್ಷೆಗೆ ಬಳಸುವ ಮೊದಲ ಸರಳ ಕನ್ನಡ ವಾಕ್ಯವಾಗಿದೆ."},
+    ]
+    rows, stats = construct_candidate_dataset(
+        records,
+        source=source(),
+        max_families=2,
+        config=RomanBenchFilter(min_chars=10, min_words=3),
+    )
+    assert stats.families == 2
+    assert stats.records == len(rows)
+    assert len({row["semantic_family_id"] for row in rows}) == 2
+    assert sum(stats.variant_counts.values()) == len(rows)
+
+
+def test_construct_candidate_dataset_rejects_unreviewed_source() -> None:
+    with pytest.raises(PermissionError):
+        construct_candidate_dataset(
+            [{"text": "ಇದು ಪರೀಕ್ಷೆಗೆ ಬಳಸುವ ಸರಳ ಕನ್ನಡ ವಾಕ್ಯವಾಗಿದೆ."}],
+            source=source("review_required"),
+            max_families=1,
+            config=RomanBenchFilter(min_chars=10, min_words=3),
+        )
