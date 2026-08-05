@@ -1,0 +1,38 @@
+[
+  {
+    "task_id": "demo-001",
+    "semantic_family_id": "demo-family-001",
+    "kannada": "ನಾನು ಇವತ್ತು ಮನೆಗೆ ಬೇಗ ಹೋಗಬೇಕು.",
+    "roman": "nanu ivattu manege bega hogbeku",
+    "variant_type": "human_like_demo",
+    "completed": 3,
+    "target": 6
+  },
+  {
+    "task_id": "demo-002",
+    "semantic_family_id": "demo-family-002",
+    "kannada": "ನಾಳೆ ಬೆಳಗ್ಗೆ ಮಾರುಕಟ್ಟೆಗೆ ಹೋಗೋಣ.",
+    "roman": "naale beligge market ge hogona",
+    "variant_type": "code_mix_demo",
+    "completed": 3,
+    "target": 6
+  },
+  {
+    "task_id": "demo-003",
+    "semantic_family_id": "demo-family-003",
+    "kannada": "ಅವನು ಸಂಜೆ ಆರು ಗಂಟೆಗೆ ಬರುತ್ತಾನೆ.",
+    "roman": "avanu sanje aru gantege baruttane",
+    "variant_type": "formal_demo",
+    "completed": 3,
+    "target": 6
+  },
+  {
+    "task_id": "demo-004",
+    "semantic_family_id": "demo-family-004",
+    "kannada": "ನನಗೆ ಈ ಸಿನಿಮಾ ತುಂಬ ಇಷ್ಟ ಆಯ್ತು.",
+    "roman": "nanage ee cinema tumba ishta aaytu",
+    "variant_type": "colloquial_demo",
+    "completed": 3,
+    "target": 6
+  }
+]
