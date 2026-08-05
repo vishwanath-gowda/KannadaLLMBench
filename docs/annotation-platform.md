@@ -28,6 +28,8 @@ The page shows one pair at a time:
 
 The interface explicitly says that question 2 is about the English-letter spelling/style and **not** whether the underlying Kannada sentence is formal or colloquial.
 
+Before the first item, contributors are shown the versioned validation contribution terms. Selecting **Start annotating** records participation under `romanbench-validation-v1`; see [`romanbench-validation-terms-v1.md`](romanbench-validation-terms-v1.md).
+
 ## Demo mode
 
 Until `annotator/config.js` contains an Apps Script URL, the site automatically operates in demo mode.
@@ -97,6 +99,7 @@ meaning_correct
 typeable_romanization
 skipped
 instructions_version
+terms_version
 client_time
 ```
 
@@ -151,12 +154,13 @@ window.ROMANBENCH_CONFIG = {
   demoWhenUnconfigured: true,
   requestTimeoutMs: 15000,
   instructionsVersion: "romanbench-annotation-v1",
+  termsVersion: "romanbench-validation-v1",
 };
 ```
 
 Commit to `main`; the Pages workflow redeploys the static site.
 
-Changing the annotation wording requires bumping `instructionsVersion`, so paper/release metadata can distinguish judgments collected under different instructions.
+Changing the annotation wording requires bumping `instructionsVersion`, so paper/release metadata can distinguish judgments collected under different instructions. Substantive changes to contributor terms require a new `termsVersion` and a corresponding terms document.
 
 ## 6. Load annotation tasks
 
@@ -233,11 +237,13 @@ The Apps Script backend enforces:
 
 The “one family per annotator” rule is important when several Roman variants share the same Kannada sentence: seeing one spelling should not anchor that person's judgment of another spelling from the same family.
 
-## 9. Submission and Apps Script cross-origin behavior
+## 9. Browser ↔ Apps Script transport
 
-The frontend submits JSON as `text/plain`, which avoids a browser CORS preflight for the normal request shape.
+Google's Content Service redirects output through a Google-hosted content URL. For reliable browser-side **read-only** task retrieval, the frontend uses JSONP with a generated callback name. Google documents JSONP as a browser-access pattern for Content Service and cautions that it should be used only for read-only information; RomanBench uses it only to retrieve the next authorized task.
 
-Apps Script web apps may redirect responses through Google-hosted content endpoints. The frontend first attempts a normal response-readable POST. If the browser blocks reading the response after the write, it retries in `no-cors` mode with the **same request ID**. The backend's idempotency check prevents the retry from producing a second annotation row.
+Submissions use POST with JSON encoded as `text/plain`, avoiding a browser CORS preflight for the normal request shape. The frontend first attempts a response-readable POST. If a browser cannot read the redirected response after the write, it retries in `no-cors` mode with the **same request ID**. The backend's idempotency check prevents the retry from producing a second annotation row.
+
+Google Content Service reference: https://developers.google.com/apps-script/guides/content
 
 For a serious production run, test the exact deployed Pages origin + Apps Script deployment in the browsers annotators will use before sending a large batch.
 
