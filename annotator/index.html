@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="RomanBench Kannada Romanization annotation">
+  <title>RomanBench Annotator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="brand">KannadaLLMBench</div>
+        <h1>RomanBench</h1>
+      </div>
+      <button id="instructionsButton" class="text-button" type="button">Instructions</button>
+    </header>
+
+    <section id="demoBanner" class="banner hidden" aria-live="polite">
+      Demo mode — answers stay only in this browser.
+    </section>
+
+    <section id="identityError" class="notice error hidden" role="alert"></section>
+
+    <section id="welcome" class="card welcome-card hidden">
+      <h2>Before you start</h2>
+      <p>You will see a Kannada sentence and one version typed using English letters.</p>
+      <p>Your job is only to answer two simple questions. There is no typing required.</p>
+      <p class="terms-note">By selecting <strong>Start annotating</strong>, you confirm these are your own judgments and agree that your Yes/No/Skip annotations may be used and released by KannadaLLMBench under CC0-1.0. Participation is voluntary and you may stop at any time.</p>
+      <button id="startButton" class="primary full" type="button">Start annotating</button>
+    </section>
+
+    <section id="annotationCard" class="card hidden" aria-live="polite">
+      <div class="progress-row">
+        <span id="progressText">Item</span>
+        <span id="annotatorText" class="muted"></span>
+      </div>
+      <div class="progress-track" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+
+      <div class="language-block">
+        <div class="label">Kannada sentence</div>
+        <div id="kannadaText" class="kannada" lang="kn"></div>
+      </div>
+
+      <div class="language-block roman-block">
+        <div class="label">Typed using English letters</div>
+        <div id="romanText" class="roman"></div>
+      </div>
+
+      <fieldset class="question" id="meaningQuestion">
+        <legend>1. Does the Roman text have the <strong>same meaning</strong> as the Kannada sentence?</legend>
+        <div class="choice-grid">
+          <button class="choice yes" type="button" data-question="meaning" data-value="yes">Yes</button>
+          <button class="choice no" type="button" data-question="meaning" data-value="no">No</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="question" id="typingQuestion">
+        <legend>2. Would you type Kannada <strong>this way using English letters</strong>?</legend>
+        <p class="question-help">Judge only the English-letter spelling/style. Do not judge whether the Kannada sentence itself is formal or colloquial.</p>
+        <div class="choice-grid">
+          <button class="choice yes" type="button" data-question="typing" data-value="yes">Yes</button>
+          <button class="choice no" type="button" data-question="typing" data-value="no">No</button>
+        </div>
+      </fieldset>
+
+      <div id="submitHint" class="submit-hint">Answer both questions to continue.</div>
+      <button id="submitButton" class="primary full" type="button" disabled>Submit &amp; next</button>
+      <button id="skipButton" class="secondary full" type="button">Skip this item</button>
+    </section>
+
+    <section id="loadingCard" class="card loading-card hidden">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="loadingText">Loading your next item…</p>
+    </section>
+
+    <section id="doneCard" class="card done-card hidden">
+      <div class="done-icon">✓</div>
+      <h2>You're done</h2>
+      <p id="doneText">Thank you. Your annotations have been recorded.</p>
+    </section>
+
+    <section id="fatalError" class="card hidden">
+      <h2>Something went wrong</h2>
+      <p id="fatalErrorText"></p>
+      <button id="retryButton" class="primary full" type="button">Try again</button>
+    </section>
+  </main>
+
+  <dialog id="instructionsDialog">
+    <div class="dialog-header">
+      <h2>How to annotate</h2>
+      <button id="closeInstructions" class="icon-button" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="dialog-body">
+      <h3>Question 1 — Same meaning?</h3>
+      <p>Answer <strong>Yes</strong> if the English-letter text represents the same Kannada words/meaning. Small spelling differences are okay if the meaning is still clear.</p>
+
+      <div class="example good">
+        <div class="example-title">Example — Yes</div>
+        <div lang="kn">ನಾನು ಇವತ್ತು ಮನೆಗೆ ಹೋಗಬೇಕು.</div>
+        <div>nanu ivattu manege hogbeku</div>
+      </div>
+
+      <div class="example bad">
+        <div class="example-title">Example — No</div>
+        <div lang="kn">ನಾನು ಇವತ್ತು ಮನೆಗೆ ಹೋಗಬೇಕು.</div>
+        <div>nanu nale manege hogbeku</div>
+        <small><em>nale</em> changes “today” to “tomorrow.”</small>
+      </div>
+
+      <h3>Question 2 — Would you type it this way?</h3>
+      <p>Imagine you are messaging someone in Kannada but using English letters. Answer <strong>Yes</strong> if this spelling is a plausible way you might type it.</p>
+      <p><strong>This is not a colloquialness question.</strong> A Kannada sentence may be formal or colloquial. Here you are judging only how Kannada is represented with English letters.</p>
+
+      <div class="example good">
+        <div class="example-title">Plausible texting</div>
+        <div lang="kn">ನಾನು ಮನೆಗೆ ಹೋಗಬೇಕು.</div>
+        <div>nanu manege hogbeku</div>
+      </div>
+
+      <div class="example neutral">
+        <div class="example-title">Meaning may be correct, but typing may feel unnatural</div>
+        <div lang="kn">ನಾನು ಮನೆಗೆ ಹೋಗಬೇಕು.</div>
+        <div>nānu manege hōgabēku</div>
+        <small>This is a formal transliteration style. You can mark meaning Yes and typing No if you would not normally type Kannada this way.</small>
+      </div>
+
+      <h3>When to skip</h3>
+      <p>Skip if you do not understand the Kannada sentence well enough to judge it. Skipping is better than guessing.</p>
+
+      <h3>Important</h3>
+      <p>Do not search online, use transliteration tools, use an AI assistant, or ask another person. We want your own judgment.</p>
+      <p>Your validation labels are contributed under the versioned RomanBench validation terms shown before you start.</p>
+    </div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

@@ -14,6 +14,10 @@ ROMAN_REVIEW ?= data/interim/romanbench/review.csv
 AUTHORING_ROWS ?= 250
 ROMAN_AUTHORING ?= data/interim/romanbench/human_authoring.csv
 ROMAN_HUMAN_TASKS ?= data/interim/romanbench/human_romanization_tasks.csv
+ANNOTATOR_INPUT ?= $(ROMAN_OUTPUT)
+ANNOTATOR_OUTPUT ?= data/interim/romanbench/annotator_tasks.csv
+ANNOTATOR_BATCH ?= pilot
+ANNOTATOR_VOTES ?= 2
 
 .PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
@@ -21,7 +25,7 @@ ROMAN_HUMAN_TASKS ?= data/interim/romanbench/human_romanization_tasks.csv
 	transform contamination-check schemas romanbench-candidates romanbench-sample \
 	romanbench-review-export romanbench-review-validate romanbench-authoring-template \
 	romanbench-authoring-validate romanbench-human-romanization-export \
-	romanbench-human-romanization-validate
+	romanbench-human-romanization-validate annotator-tasks annotator-check
 
 help:
 	@echo "KannadaLLMBench targets"
@@ -44,6 +48,8 @@ help:
 	@echo "  make romanbench-authoring-validate Validate original-Kannada authoring sheet"
 	@echo "  make romanbench-human-romanization-export Export independent Romanization tasks"
 	@echo "  make romanbench-human-romanization-validate Validate completed natural Romanizations"
+	@echo "  make annotator-tasks         Export RomanBench candidates to Google Sheet Tasks CSV"
+	@echo "  make annotator-check         Syntax-check the static annotator and Apps Script files"
 	@echo "  make clean                  Remove caches/build artifacts (not source)"
 
 all: check build
@@ -82,6 +88,14 @@ format-check:
 	$(PY) -m ruff format --check src scripts tests
 
 check: registry-validate lint test schemas
+
+annotator-check:
+	node --check annotator/app.js
+	cp annotator/apps-script/Code.gs /tmp/romanbench-annotator-Code.js
+	node --check /tmp/romanbench-annotator-Code.js
+	rm -f /tmp/romanbench-annotator-Code.js
+	$(BASE_PYTHON) -m json.tool annotator/demo-tasks.json >/dev/null
+	$(BASE_PYTHON) -m json.tool annotator/apps-script/appsscript.json >/dev/null
 
 bootstrap-external:
 	$(PY) scripts/bootstrap_external.py
@@ -138,6 +152,10 @@ romanbench-human-romanization-export:
 
 romanbench-human-romanization-validate:
 	$(PY) scripts/validate_romanbench_romanizations.py $(ROMAN_HUMAN_TASKS)
+
+annotator-tasks:
+	$(PY) scripts/export_annotator_tasks.py $(ANNOTATOR_INPUT) $(ANNOTATOR_OUTPUT) \
+		--mode romanbench --batch $(ANNOTATOR_BATCH) --target-votes $(ANNOTATOR_VOTES)
 
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)

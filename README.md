@@ -4,7 +4,7 @@
 
 The project combines established external Kannada benchmarks with new Kannada-native tracks for Romanized Kannada, colloquial/spoken Kannada, Kannada-English code mixing, Karnataka-specific context, and conversational naturalness. It also provides reproducible, license-aware data pipelines for training and fine-tuning Kannada models without contaminating evaluation sets.
 
-> **Status:** Foundation + external reference integrations are implemented. RomanBench v0.1 controlled candidate-data construction is implemented; human review and natural Roman variants are the next data step.
+> **Status:** Foundation + external reference integrations are implemented. RomanBench v0.1 candidate construction and a free GitHub Pages + Google Sheets human-validation platform are implemented; pilot annotation is the next data step.
 
 ## Principles
 
@@ -16,6 +16,7 @@ The project combines established external Kannada benchmarks with new Kannada-na
 - **Reproducible results.** Pin dataset/model revisions and emit manifests/hashes.
 - **Backend independent.** MLX on Apple Silicon, Transformers, vLLM, or APIs can feed the same evaluation contracts.
 - **Synthetic is labeled synthetic.** Generated Romanization variants are construction candidates, not natural-language gold.
+- **Separate linguistic dimensions.** Romanization typing plausibility is not colloquialness or code mixing.
 
 ## Benchmark map
 
@@ -31,7 +32,7 @@ The project combines established external Kannada benchmarks with new Kannada-na
 
 | Track | Focus | Status |
 |---|---|---|
-| RomanBench | Romanized Kannada and spelling variation | controlled candidate pipeline implemented |
+| RomanBench | Romanized Kannada and spelling variation | construction + validation tooling implemented |
 | ColloquialBench | natural spoken-style Kannada | planned |
 | KanMixBench | Kannada-English code/script mixing | separate project; integration contract defined |
 | CultureBench | Karnataka-specific cultural/context understanding | planned |
@@ -44,6 +45,7 @@ See [`docs/benchmark-taxonomy.md`](docs/benchmark-taxonomy.md).
 - Python **3.12+**
 - `git` for pinned external benchmark checkout
 - optional Hugging Face token for gated upstream resources
+- Node.js only when running the optional static annotator syntax check locally
 
 ```bash
 python3.12 -m venv .venv
@@ -62,6 +64,7 @@ make install-dev
 
 ```text
 KannadaLLMBench/
+├── annotator/                  # GitHub Pages UI + Google Apps Script backend source
 ├── config/
 │   └── data_sources.yaml       # source license/provenance registry
 ├── data/                       # local/generated; ignored by default
@@ -71,12 +74,13 @@ KannadaLLMBench/
 ├── scripts/                    # CLI entrypoints and project operations
 ├── src/kannadallmbench/
 │   ├── pipelines/              # reusable data transforms + RomanBench construction
+│   ├── annotation_tasks.py     # Sheet task export contract
 │   ├── contamination.py
 │   ├── data_registry.py
 │   ├── registry.py
 │   └── results.py
 ├── tests/
-└── .github/                    # CI and community templates
+└── .github/                    # CI, Pages deployment, and community templates
 ```
 
 ## Data source policy
@@ -114,9 +118,60 @@ make romanbench-sample
 
 Outputs go under `data/interim/romanbench/` and remain Git-ignored. Each row carries source ID, pinned revision, license basis, source-record location, `review_status=pending`, and `split=candidate`. A sidecar manifest records construction parameters, counts, SHA-256, and the actual variant distribution.
 
-**These are not benchmark gold.** Natural Roman Kannada requires Kannada-speaker review or human-authored variants before promotion to a public test split.
+Synthetic variants remain labeled synthetic after validation. They are not automatically treated as human-origin Roman Kannada.
 
 See [`docs/romanbench-data-construction.md`](docs/romanbench-data-construction.md) and [`docs/romanbench-v0.1.md`](docs/romanbench-v0.1.md).
+
+## Human validation platform
+
+RomanBench includes a free annotation system designed for Kannada speakers known to the project:
+
+- static mobile-first frontend on GitHub Pages;
+- Google Apps Script backend;
+- private Google Sheet storage;
+- pseudonymous annotator IDs + random access tokens;
+- no typing required for normal validation.
+
+Each item asks exactly:
+
+1. **Does the Roman text have the same meaning as the Kannada sentence?**
+2. **Would you type Kannada this way using English letters?**
+
+The second question explicitly refers to the Roman/English-letter spelling style. It does **not** ask whether the underlying Kannada sentence is formal or colloquial.
+
+The site runs in demo mode automatically until an Apps Script endpoint is configured in `annotator/config.js`.
+
+Export generated candidates into the Sheet task schema:
+
+```bash
+make annotator-tasks \
+  ANNOTATOR_INPUT=data/interim/romanbench/candidates.jsonl \
+  ANNOTATOR_OUTPUT=data/interim/romanbench/annotator_tasks.csv \
+  ANNOTATOR_BATCH=pilot \
+  ANNOTATOR_VOTES=2
+```
+
+The same exporter supports re-annotation of existing permissively licensed Kannada↔Roman datasets using `--mode pairs`.
+
+See:
+
+- [`docs/annotation-platform.md`](docs/annotation-platform.md) for deployment and operations;
+- [`docs/romanbench-annotation-strategy.md`](docs/romanbench-annotation-strategy.md) for the research/data strategy and future-paper methodology record.
+
+## Fresh human-origin private-test workflow
+
+For a contamination-resistant hidden set, the repository also supports newly authored Kannada controls and independent Romanization contributors:
+
+```bash
+make romanbench-authoring-template AUTHORING_ROWS=250
+make romanbench-authoring-validate
+make romanbench-human-romanization-export
+make romanbench-human-romanization-validate
+```
+
+This higher-cost path is complementary to low-friction validation. The benchmark strategy intentionally combines real existing pairs, synthetic-but-human-validated variants, and a smaller fresh human-origin stratum rather than relying entirely on one construction mechanism.
+
+See [`docs/romanbench-human-collection.md`](docs/romanbench-human-collection.md).
 
 ## Slice a Hugging Face dataset without downloading all of it
 
@@ -227,12 +282,14 @@ Run `make help`. Important targets include:
 
 - `make install-dev`
 - `make check`
+- `make annotator-check`
 - `make data-sources`
 - `make registry-validate`
 - `make data-build-records`
 - `make data-build-mb`
 - `make romanbench-candidates`
 - `make romanbench-sample`
+- `make annotator-tasks`
 - `make bootstrap-external`
 - `make milu`
 - `make indicifeval`
@@ -248,6 +305,9 @@ Run `make help`. Important targets include:
 - [External benchmarks](docs/external-benchmarks.md)
 - [RomanBench v0.1 design](docs/romanbench-v0.1.md)
 - [RomanBench data construction](docs/romanbench-data-construction.md)
+- [RomanBench human collection](docs/romanbench-human-collection.md)
+- [RomanBench annotation/paper strategy](docs/romanbench-annotation-strategy.md)
+- [Annotation platform](docs/annotation-platform.md)
 - [KanMixBench integration](docs/kanmixbench-integration.md)
 - [Reproducibility](docs/reproducibility.md)
 - [Development](docs/development.md)
