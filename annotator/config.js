@@ -5,4 +5,5 @@ window.ROMANBENCH_CONFIG = {
   demoWhenUnconfigured: true,
   requestTimeoutMs: 15000,
   instructionsVersion: "romanbench-annotation-v1",
+  termsVersion: "romanbench-validation-v1",
 };
