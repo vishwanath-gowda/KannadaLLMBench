@@ -51,12 +51,16 @@
     return `romanbench:${identity.annotator || "demo"}:${name}`;
   }
 
+  function consentVersion() {
+    return `${config.instructionsVersion || "v1"}|${config.termsVersion || "terms-v1"}`;
+  }
+
   function instructionsSeen() {
-    return localStorage.getItem(storageKey("instructions")) === config.instructionsVersion;
+    return localStorage.getItem(storageKey("instructions")) === consentVersion();
   }
 
   function markInstructionsSeen() {
-    localStorage.setItem(storageKey("instructions"), config.instructionsVersion || "v1");
+    localStorage.setItem(storageKey("instructions"), consentVersion());
   }
 
   function resetAnswers() {
