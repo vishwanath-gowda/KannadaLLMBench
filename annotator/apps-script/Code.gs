@@ -17,13 +17,18 @@ const HEADERS = {
 };
 
 function doGet(e) {
+  let result;
   try {
     const action = clean_(e && e.parameter && e.parameter.action) || 'next';
-    if (action !== 'next') return json_({ ok: false, error: 'Unsupported GET action' });
-    return json_(nextTask_(e.parameter));
+    if (action !== 'next') result = { ok: false, error: 'Unsupported GET action' };
+    else result = nextTask_(e.parameter);
   } catch (error) {
-    return json_({ ok: false, error: String(error && error.message || error) });
+    result = { ok: false, error: String(error && error.message || error) };
   }
+
+  const prefix = clean_(e && e.parameter && e.parameter.prefix);
+  if (prefix) return jsonp_(prefix, result);
+  return json_(result);
 }
 
 function doPost(e) {
@@ -84,7 +89,8 @@ function createAnnotator(annotatorId, siteUrl, batches) {
     sheet.appendRow([annotatorId, tokenHash, true, batches || '', '', '']);
   }
   const base = String(siteUrl || '').replace(/\/$/, '');
-  const url = `${base}/?annotator=${encodeURIComponent(annotatorId)}&token=${encodeURIComponent(token)}&batch=${encodeURIComponent(batches || 'default')}`;
+  const firstBatch = String(batches || 'default').split(',')[0].trim() || 'default';
+  const url = `${base}/?annotator=${encodeURIComponent(annotatorId)}&token=${encodeURIComponent(token)}&batch=${encodeURIComponent(firstBatch)}`;
   console.log(url);
   return url;
 }
@@ -241,6 +247,17 @@ function json_(value) {
   return ContentService
     .createTextOutput(JSON.stringify(value))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonp_(prefix, value) {
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]{0,80}$/.test(prefix)) {
+    return ContentService
+      .createTextOutput('throw new Error("Invalid JSONP callback");')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService
+    .createTextOutput(`${prefix}(${JSON.stringify(value)});`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function clean_(value) {
