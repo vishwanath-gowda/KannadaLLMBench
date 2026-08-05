@@ -4,6 +4,8 @@ const SHEETS = {
   ANNOTATORS: 'Annotators',
 };
 
+const VALIDATION_TERMS_VERSION = 'romanbench-validation-v1';
+
 const HEADERS = {
   Tasks: [
     'task_id', 'semantic_family_id', 'kannada', 'roman', 'variant_type',
@@ -11,7 +13,7 @@ const HEADERS = {
   ],
   Annotations: [
     'timestamp', 'request_id', 'task_id', 'semantic_family_id', 'annotator_id', 'batch_id',
-    'meaning_correct', 'typeable_romanization', 'skipped', 'instructions_version', 'client_time'
+    'meaning_correct', 'typeable_romanization', 'skipped', 'instructions_version', 'terms_version', 'client_time'
   ],
   Annotators: ['annotator_id', 'token_sha256', 'active', 'batches', 'max_tasks', 'note'],
 };
@@ -210,6 +212,7 @@ function submitAnnotation_(payload) {
       skipped ? '' : typing,
       skipped,
       clean_(payload.instructions_version),
+      VALIDATION_TERMS_VERSION,
       clean_(payload.client_time),
     ]);
     return { ok: true };
