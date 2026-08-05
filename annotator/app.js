@@ -108,17 +108,39 @@
     }
   }
 
-  async function apiGetNext() {
-    const url = new URL(config.apiUrl);
-    url.searchParams.set("action", "next");
-    url.searchParams.set("annotator", identity.annotator);
-    url.searchParams.set("token", identity.token);
-    url.searchParams.set("batch", identity.batch);
-    const response = await fetchWithTimeout(url.toString(), { cache: "no-store" });
-    if (!response.ok) throw new Error(`Backend returned HTTP ${response.status}`);
-    const data = await response.json();
-    if (!data.ok) throw new Error(data.error || "Backend rejected the request");
-    return data;
+  function apiGetNext() {
+    return new Promise((resolve, reject) => {
+      const callback = `__romanbench_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const url = new URL(config.apiUrl);
+      url.searchParams.set("action", "next");
+      url.searchParams.set("annotator", identity.annotator);
+      url.searchParams.set("token", identity.token);
+      url.searchParams.set("batch", identity.batch);
+      url.searchParams.set("prefix", callback);
+
+      const script = document.createElement("script");
+      const cleanup = () => {
+        clearTimeout(timeout);
+        script.remove();
+        try { delete window[callback]; } catch (_) { window[callback] = undefined; }
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("Backend request timed out"));
+      }, config.requestTimeoutMs || 15000);
+
+      window[callback] = (data) => {
+        cleanup();
+        if (!data || !data.ok) reject(new Error((data && data.error) || "Backend rejected the request"));
+        else resolve(data);
+      };
+      script.onerror = () => {
+        cleanup();
+        reject(new Error("Could not load the annotation backend"));
+      };
+      script.src = url.toString();
+      document.head.appendChild(script);
+    });
   }
 
   async function apiSubmit(payload) {
@@ -134,8 +156,8 @@
       if (!data.ok) throw new Error(data.error || "Submission rejected");
       return data;
     } catch (error) {
-      // Some Apps Script deployments allow the write but block the cross-origin response.
-      // Retrying with the same request_id is safe because the backend is idempotent.
+      // Apps Script Content Service can redirect responses through another Google host.
+      // Retrying as a write-only request with the same request_id is safe because the backend is idempotent.
       await fetch(config.apiUrl, {
         method: "POST",
         mode: "no-cors",
