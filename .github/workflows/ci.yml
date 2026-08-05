@@ -15,11 +15,12 @@ jobs:
         python-version: ["3.12", "3.13"]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: make install-dev
       - run: make check
+      - run: make annotator-check
       - run: make build
