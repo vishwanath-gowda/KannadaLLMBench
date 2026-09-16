@@ -17,6 +17,22 @@
     document.body.appendChild(script);
   }
 
+  function warmBackend() {
+    if (!config.apiUrl) return;
+    try {
+      const url = new URL(config.apiUrl);
+      url.searchParams.set("action", "ping");
+      url.searchParams.set("_", String(Date.now()));
+      fetch(url.toString(), {
+        mode: "no-cors",
+        cache: "no-store",
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {
+      // Best-effort warmup only.
+    }
+  }
+
   function jsonp(action, token) {
     return new Promise((resolve, reject) => {
       const callback = `__romanbench_auth_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -29,7 +45,7 @@
       const timeout = setTimeout(() => {
         cleanup();
         reject(new Error("Token verification timed out"));
-      }, config.requestTimeoutMs || 15000);
+      }, config.authTimeoutMs || 45000);
 
       function cleanup() {
         clearTimeout(timeout);
@@ -70,6 +86,7 @@
 
     tokenButton.disabled = true;
     tokenButton.textContent = "Checking…";
+    warmBackend();
 
     try {
       const identity = await jsonp("resolve", token);
@@ -93,6 +110,7 @@
     return;
   }
 
+  warmBackend();
   tokenGate.classList.remove("hidden");
   tokenInput.focus();
   tokenButton.addEventListener("click", verifyToken);
