@@ -26,6 +26,7 @@
     annotatorText: el("annotatorText"),
     kannadaText: el("kannadaText"),
     romanText: el("romanText"),
+    typingQuestion: el("typingQuestion"),
     submitButton: el("submitButton"),
     skipButton: el("skipButton"),
     submitHint: el("submitHint"),
@@ -66,13 +67,33 @@
   function resetAnswers() {
     answers = { meaning: null, typing: null };
     document.querySelectorAll(".choice").forEach((button) => button.classList.remove("selected"));
+    ui.typingQuestion.classList.add("hidden");
+    ui.submitButton.classList.add("hidden");
     updateSubmitState();
   }
 
   function updateSubmitState() {
-    const ready = answers.meaning !== null && answers.typing !== null;
+    if (answers.meaning === null) {
+      ui.typingQuestion.classList.add("hidden");
+      ui.submitButton.classList.add("hidden");
+      ui.submitButton.disabled = true;
+      ui.submitHint.textContent = "Answer question 1 to continue.";
+      return;
+    }
+
+    if (answers.meaning === "no") {
+      ui.typingQuestion.classList.add("hidden");
+      ui.submitButton.classList.add("hidden");
+      ui.submitButton.disabled = true;
+      ui.submitHint.textContent = "Meaning differs — saving and moving on…";
+      return;
+    }
+
+    ui.typingQuestion.classList.remove("hidden");
+    ui.submitButton.classList.remove("hidden");
+    const ready = answers.typing !== null;
     ui.submitButton.disabled = !ready;
-    ui.submitHint.textContent = ready ? "Ready to submit." : "Answer both questions to continue.";
+    ui.submitHint.textContent = ready ? "Ready to submit." : "Answer question 2 to continue.";
   }
 
   function setChoice(question, value) {
@@ -80,6 +101,13 @@
     document.querySelectorAll(`[data-question="${question}"]`).forEach((button) => {
       button.classList.toggle("selected", button.dataset.value === value);
     });
+
+    if (question === "meaning" && value !== "yes") {
+      answers.typing = null;
+      document.querySelectorAll('[data-question="typing"]').forEach((button) => {
+        button.classList.remove("selected");
+      });
+    }
     updateSubmitState();
   }
 
@@ -225,7 +253,8 @@
 
   async function submitCurrent(skipped = false) {
     if (!currentTask) return;
-    if (!skipped && (answers.meaning === null || answers.typing === null)) return;
+    if (!skipped && answers.meaning === null) return;
+    if (!skipped && answers.meaning === "yes" && answers.typing === null) return;
 
     ui.submitButton.disabled = true;
     ui.skipButton.disabled = true;
@@ -240,7 +269,7 @@
       task_id: currentTask.task_id,
       semantic_family_id: currentTask.semantic_family_id,
       meaning_correct: skipped ? "" : answers.meaning,
-      typeable_romanization: skipped ? "" : answers.typing,
+      typeable_romanization: skipped || answers.meaning !== "yes" ? "" : answers.typing,
       skipped,
       instructions_version: config.instructionsVersion || "v1",
       client_time: new Date().toISOString(),
@@ -273,7 +302,12 @@
   }
 
   document.querySelectorAll(".choice").forEach((button) => {
-    button.addEventListener("click", () => setChoice(button.dataset.question, button.dataset.value));
+    button.addEventListener("click", async () => {
+      setChoice(button.dataset.question, button.dataset.value);
+      if (button.dataset.question === "meaning" && button.dataset.value === "no") {
+        await submitCurrent(false);
+      }
+    });
   });
   ui.submitButton.addEventListener("click", () => submitCurrent(false));
   ui.skipButton.addEventListener("click", () => submitCurrent(true));
