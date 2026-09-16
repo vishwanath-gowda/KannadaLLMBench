@@ -9,6 +9,43 @@
   const tokenError = document.getElementById("tokenError");
   const instructionsButton = document.getElementById("instructionsButton");
 
+  const CLIENT_ID_KEY = "romanbench:browser-client-id";
+
+  function newClientId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return `rb-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function browserClientId() {
+    try {
+      let value = localStorage.getItem(CLIENT_ID_KEY);
+      if (!value) {
+        value = newClientId();
+        localStorage.setItem(CLIENT_ID_KEY, value);
+      }
+      return value;
+    } catch (_) {
+      try {
+        let value = sessionStorage.getItem(CLIENT_ID_KEY);
+        if (!value) {
+          value = newClientId();
+          sessionStorage.setItem(CLIENT_ID_KEY, value);
+        }
+        return value;
+      } catch (_) {
+        return newClientId();
+      }
+    }
+  }
+
+  // Scope every Apps Script request made by app-v3 to this browser. GET bundle
+  // requests retain this query parameter when app-v3 adds action/token/batch.
+  if (config.apiUrl) {
+    const scopedApiUrl = new URL(config.apiUrl);
+    scopedApiUrl.searchParams.set("client_id", browserClientId());
+    config.apiUrl = scopedApiUrl.toString();
+  }
+
   function loadMobileLayer() {
     const css = document.createElement("link");
     css.rel = "stylesheet";
