@@ -4,35 +4,53 @@
     "semantic_family_id": "demo-family-001",
     "kannada": "ನಾನು ಇವತ್ತು ಮನೆಗೆ ಬೇಗ ಹೋಗಬೇಕು.",
     "roman": "nanu ivattu manege bega hogbeku",
-    "variant_type": "human_like_demo",
-    "completed": 3,
-    "target": 6
+    "variant_type": "natural_positive",
+    "completed": 0,
+    "target": 1
   },
   {
     "task_id": "demo-002",
     "semantic_family_id": "demo-family-002",
-    "kannada": "ನಾಳೆ ಬೆಳಗ್ಗೆ ಮಾರುಕಟ್ಟೆಗೆ ಹೋಗೋಣ.",
-    "roman": "naale beligge market ge hogona",
-    "variant_type": "code_mix_demo",
-    "completed": 3,
-    "target": 6
+    "kannada": "ನಾನು ಮನೆಗೆ ಹೋಗಬೇಕು.",
+    "roman": "nānu manege hōgabēku",
+    "variant_type": "meaning_correct_formal_transliteration",
+    "completed": 0,
+    "target": 1
   },
   {
     "task_id": "demo-003",
     "semantic_family_id": "demo-family-003",
-    "kannada": "ಅವನು ಸಂಜೆ ಆರು ಗಂಟೆಗೆ ಬರುತ್ತಾನೆ.",
-    "roman": "avanu sanje aru gantege baruttane",
-    "variant_type": "formal_demo",
-    "completed": 3,
-    "target": 6
+    "kannada": "ನಾನು ಇವತ್ತು ಮನೆಗೆ ಹೋಗಬೇಕು.",
+    "roman": "nanu nale manege hogbeku",
+    "variant_type": "semantic_negative_today_tomorrow",
+    "completed": 0,
+    "target": 1
   },
   {
     "task_id": "demo-004",
     "semantic_family_id": "demo-family-004",
+    "kannada": "ಅವನು ಸಂಜೆ ಆರು ಗಂಟೆಗೆ ಬರುತ್ತಾನೆ.",
+    "roman": "avanu sanje aaru gantege baruttane",
+    "variant_type": "natural_positive",
+    "completed": 0,
+    "target": 1
+  },
+  {
+    "task_id": "demo-005",
+    "semantic_family_id": "demo-family-005",
+    "kannada": "ಅವನು ಸಂಜೆ ಆರು ಗಂಟೆಗೆ ಬರುತ್ತಾನೆ.",
+    "roman": "avanu sanje entu gantege baruttane",
+    "variant_type": "semantic_negative_six_eight",
+    "completed": 0,
+    "target": 1
+  },
+  {
+    "task_id": "demo-006",
+    "semantic_family_id": "demo-family-006",
     "kannada": "ನನಗೆ ಈ ಸಿನಿಮಾ ತುಂಬ ಇಷ್ಟ ಆಯ್ತು.",
     "roman": "nanage ee cinema tumba ishta aaytu",
-    "variant_type": "colloquial_demo",
-    "completed": 3,
-    "target": 6
+    "variant_type": "colloquial_underlying_kannada_positive",
+    "completed": 0,
+    "target": 1
   }
 ]

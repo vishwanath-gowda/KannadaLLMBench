@@ -18,6 +18,14 @@ ANNOTATOR_INPUT ?= $(ROMAN_OUTPUT)
 ANNOTATOR_OUTPUT ?= data/interim/romanbench/annotator_tasks.csv
 ANNOTATOR_BATCH ?= pilot
 ANNOTATOR_VOTES ?= 2
+PILOT_INPUT ?= $(ROMAN_OUTPUT)
+PILOT_OUTPUT ?= data/interim/romanbench/pilot-v1-tasks.csv
+PILOT_FAMILIES ?= 30
+PILOT_BATCH ?= pilot-v1
+PILOT_VOTES ?= 2
+PILOT_ANNOTATIONS ?= data/interim/romanbench/pilot-v1-annotations.csv
+PILOT_ANALYSIS ?= data/interim/romanbench/pilot-analysis.json
+PILOT_DISAGREEMENTS ?= data/interim/romanbench/pilot-disagreements.csv
 
 .PHONY: help all venv install install-dev install-all build test lint format format-check check clean \
 	bootstrap-external milu indicifeval indicgenbench-dev external-all \
@@ -25,7 +33,8 @@ ANNOTATOR_VOTES ?= 2
 	transform contamination-check schemas romanbench-candidates romanbench-sample \
 	romanbench-review-export romanbench-review-validate romanbench-authoring-template \
 	romanbench-authoring-validate romanbench-human-romanization-export \
-	romanbench-human-romanization-validate annotator-tasks annotator-check
+	romanbench-human-romanization-validate annotator-tasks annotator-check \
+	romanbench-pilot romanbench-pilot-analyze
 
 help:
 	@echo "KannadaLLMBench targets"
@@ -49,6 +58,8 @@ help:
 	@echo "  make romanbench-human-romanization-export Export independent Romanization tasks"
 	@echo "  make romanbench-human-romanization-validate Validate completed natural Romanizations"
 	@echo "  make annotator-tasks         Export RomanBench candidates to Google Sheet Tasks CSV"
+	@echo "  make romanbench-pilot        Build deterministic 30-family pilot task CSV"
+	@echo "  make romanbench-pilot-analyze Analyze exported pilot annotations"
 	@echo "  make annotator-check         Syntax-check the static annotator and Apps Script files"
 	@echo "  make clean                  Remove caches/build artifacts (not source)"
 
@@ -156,6 +167,15 @@ romanbench-human-romanization-validate:
 annotator-tasks:
 	$(PY) scripts/export_annotator_tasks.py $(ANNOTATOR_INPUT) $(ANNOTATOR_OUTPUT) \
 		--mode romanbench --batch $(ANNOTATOR_BATCH) --target-votes $(ANNOTATOR_VOTES)
+
+romanbench-pilot:
+	$(PY) scripts/build_romanbench_pilot.py $(PILOT_INPUT) $(PILOT_OUTPUT) \
+		--families $(PILOT_FAMILIES) --batch $(PILOT_BATCH) --target-votes $(PILOT_VOTES)
+
+romanbench-pilot-analyze:
+	@test -f "$(PILOT_ANNOTATIONS)" || (echo "PILOT_ANNOTATIONS not found: $(PILOT_ANNOTATIONS)" && exit 2)
+	$(PY) scripts/analyze_romanbench_pilot.py $(PILOT_ANNOTATIONS) \
+		--output $(PILOT_ANALYSIS) --disagreements-output $(PILOT_DISAGREEMENTS)
 
 transform:
 	@test -n "$(INPUT)" || (echo "INPUT is required" && exit 2)

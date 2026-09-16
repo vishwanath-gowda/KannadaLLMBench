@@ -112,7 +112,10 @@ function nextTask_(params) {
     const tasks = rowsAsObjects_(taskSheet);
     const annotations = rowsAsObjects_(annotationSheet);
 
-    const mine = annotations.filter((row) => clean_(row.annotator_id) === annotatorId);
+    const mine = annotations.filter((row) => (
+      clean_(row.annotator_id) === annotatorId
+      && (clean_(row.batch_id) || 'default') === requestedBatch
+    ));
     const seenFamilies = new Set(mine.map((row) => clean_(row.semantic_family_id)).filter(Boolean));
     const completedTasks = mine.filter((row) => !truthy_(row.skipped)).length;
     const maxTasks = numberOr_(annotator.max_tasks, 0);
@@ -122,6 +125,7 @@ function nextTask_(params) {
 
     const voteCounts = {};
     annotations.forEach((row) => {
+      if ((clean_(row.batch_id) || 'default') !== requestedBatch) return;
       if (truthy_(row.skipped)) return;
       const taskId = clean_(row.task_id);
       if (taskId) voteCounts[taskId] = (voteCounts[taskId] || 0) + 1;
@@ -189,7 +193,11 @@ function submitAnnotation_(payload) {
     const annotations = rowsAsObjects_(annotationSheet);
     const duplicateRequest = annotations.find((row) => clean_(row.request_id) === requestId);
     if (duplicateRequest) return { ok: true, duplicate: true };
-    const duplicateFamily = annotations.find((row) => clean_(row.annotator_id) === annotatorId && clean_(row.semantic_family_id) === familyId);
+    const duplicateFamily = annotations.find((row) => (
+      clean_(row.annotator_id) === annotatorId
+      && clean_(row.semantic_family_id) === familyId
+      && (clean_(row.batch_id) || 'default') === batch
+    ));
     if (duplicateFamily) return { ok: true, duplicate_family: true };
 
     const taskSheet = SpreadsheetApp.getActive().getSheetByName(SHEETS.TASKS);
@@ -202,14 +210,17 @@ function submitAnnotation_(payload) {
 
     const skipped = Boolean(payload.skipped);
     const meaning = clean_(payload.meaning_correct).toLowerCase();
-    const typing = clean_(payload.typeable_romanization).toLowerCase();
+    let typing = clean_(payload.typeable_romanization).toLowerCase();
     if (!skipped && !['yes', 'no'].includes(meaning)) throw new Error('meaning_correct must be yes or no');
-    if (!skipped && !['yes', 'no'].includes(typing)) throw new Error('typeable_romanization must be yes or no');
+    if (!skipped && meaning === 'yes' && !['yes', 'no'].includes(typing)) {
+      throw new Error('typeable_romanization must be yes or no when meaning_correct=yes');
+    }
+    if (skipped || meaning !== 'yes') typing = '';
 
     annotationSheet.appendRow([
       new Date(), requestId, taskId, familyId, annotatorId, batch,
       skipped ? '' : meaning,
-      skipped ? '' : typing,
+      typing,
       skipped,
       clean_(payload.instructions_version),
       VALIDATION_TERMS_VERSION,
