@@ -17,7 +17,7 @@
         <div class="brand">KannadaLLMBench</div>
         <h1>RomanBench</h1>
       </div>
-      <button id="instructionsButton" class="text-button" type="button">Instructions</button>
+      <button id="instructionsButton" class="text-button hidden" type="button">Instructions</button>
     </header>
 
     <section id="demoBanner" class="banner hidden" aria-live="polite">
@@ -25,6 +25,23 @@
     </section>
 
     <section id="identityError" class="notice error hidden" role="alert"></section>
+
+    <section id="tokenGate" class="card welcome-card hidden">
+      <h2>Enter annotator token</h2>
+      <p>Enter the token given to you by the RomanBench organizer.</p>
+      <input
+        id="annotatorToken"
+        type="password"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="Annotator token"
+        aria-label="Annotator token"
+        style="width:100%;min-height:52px;border:1px solid #d1d5db;border-radius:13px;padding:0 14px;margin-top:8px;"
+      >
+      <div id="tokenError" class="notice error hidden" role="alert" style="margin-top:12px;margin-bottom:0;"></div>
+      <button id="tokenButton" class="primary full" type="button">Continue</button>
+    </section>
 
     <section id="welcome" class="card welcome-card hidden">
       <h2>Before you start</h2>
@@ -143,6 +160,6 @@
   </dialog>
 
   <script src="config.js"></script>
-  <script src="app.js" defer></script>
+  <script src="token-entry.js" defer></script>
 </body>
 </html>
