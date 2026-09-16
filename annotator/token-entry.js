@@ -12,7 +12,7 @@
   function loadAnnotatorApp() {
     instructionsButton.classList.remove("hidden");
     const script = document.createElement("script");
-    script.src = "app.js";
+    script.src = "app-v3.js";
     script.defer = true;
     document.body.appendChild(script);
   }
