@@ -9,11 +9,24 @@
   const tokenError = document.getElementById("tokenError");
   const instructionsButton = document.getElementById("instructionsButton");
 
+  function loadMobileLayer() {
+    const css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "mobile.css?v=1";
+    document.head.appendChild(css);
+
+    const script = document.createElement("script");
+    script.src = "mobile-ui.js?v=1";
+    script.defer = true;
+    document.body.appendChild(script);
+  }
+
   function loadAnnotatorApp() {
     instructionsButton.classList.remove("hidden");
     const script = document.createElement("script");
-    script.src = "app-v3.js";
+    script.src = "app-v3.js?v=durable-1";
     script.defer = true;
+    script.onload = loadMobileLayer;
     document.body.appendChild(script);
   }
 
