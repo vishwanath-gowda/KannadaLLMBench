@@ -165,6 +165,9 @@ function nextTasks_(params) {
   const annotatorId = clean_(params.annotator);
   const token = clean_(params.token);
   const requestedBatch = clean_(params.batch) || 'default';
+  const clientId = clean_(params.client_id);
+  if (!clientId) throw new Error('Missing browser session id. Hard-refresh this annotation page.');
+  const clientKey = clientLeaseKey_(clientId);
   const requestedCount = Math.max(
     1,
     Math.min(MAX_BUNDLE_SIZE, Math.floor(numberOr_(params.count, DEFAULT_BUNDLE_SIZE)))
@@ -222,6 +225,20 @@ function nextTasks_(params) {
       .filter((row) => clean_(row.annotator_id) === annotatorId)
       .sort((a, b) => dateMs_(a.leased_at) - dateMs_(b.leased_at));
 
+    // Leases created before browser-scoped leasing have plain UUID assignment IDs.
+    // The first refreshed browser to contact the backend claims those legacy leases.
+    mineLeases.forEach((row) => {
+      if (assignmentClientKey_(row.assignment_id)) return;
+      const legacyId = clean_(row.assignment_id) || Utilities.getUuid();
+      const claimedId = makeClientAssignmentId_(clientKey, legacyId);
+      assignmentSheet.getRange(row.__row, 1).setValue(claimedId);
+      row.assignment_id = claimedId;
+    });
+
+    const clientLeases = mineLeases.filter((row) => assignmentClientKey_(row.assignment_id) === clientKey);
+
+    // Families leased by this annotator on any browser remain reserved for the annotator,
+    // but only leases belonging to this browser are re-served to this browser.
     mineLeases.forEach((row) => {
       const familyId = clean_(row.semantic_family_id);
       if (familyId) seenFamilies.add(familyId);
@@ -243,7 +260,7 @@ function nextTasks_(params) {
 
     const responseTasks = [];
     const responseTaskIds = new Set();
-    mineLeases.forEach((lease) => {
+    clientLeases.forEach((lease) => {
       if (responseTasks.length >= requestedCount) return;
       const taskId = clean_(lease.task_id);
       const task = taskById[taskId];
@@ -296,7 +313,7 @@ function nextTasks_(params) {
       if (effectiveVotes >= target) continue;
 
       newAssignments.push([
-        Utilities.getUuid(),
+        makeClientAssignmentId_(clientKey),
         taskId,
         familyId,
         annotatorId,
@@ -325,10 +342,13 @@ function nextTasks_(params) {
     const totalForAnnotator = maxTasks > 0
       ? maxTasks
       : completedTasks + mineLeases.length + newAssignments.length + remainingFamilies;
+    const annotatorDone = maxTasks > 0
+      ? completedTasks >= maxTasks
+      : responseTasks.length === 0 && mineLeases.length === 0 && remainingFamilies === 0;
 
     return {
       ok: true,
-      done: responseTasks.length === 0,
+      done: annotatorDone,
       tasks: responseTasks,
       task: responseTasks[0] || null,
       lease_seconds: Math.floor(LEASE_TTL_MS / 1000),
@@ -551,6 +571,19 @@ function sha256_(value) {
     Utilities.Charset.UTF_8
   );
   return bytes.map((byte) => ('0' + ((byte < 0 ? byte + 256 : byte).toString(16))).slice(-2)).join('');
+}
+
+function clientLeaseKey_(clientId) {
+  return sha256_(clientId).slice(0, 16);
+}
+
+function assignmentClientKey_(assignmentId) {
+  const match = clean_(assignmentId).match(/^c:([0-9a-f]{16}):/);
+  return match ? match[1] : '';
+}
+
+function makeClientAssignmentId_(clientKey, suffix) {
+  return `c:${clientKey}:${clean_(suffix) || Utilities.getUuid()}`;
 }
 
 function stableScore_(value) {
