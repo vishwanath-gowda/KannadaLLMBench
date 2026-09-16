@@ -202,14 +202,17 @@ function submitAnnotation_(payload) {
 
     const skipped = Boolean(payload.skipped);
     const meaning = clean_(payload.meaning_correct).toLowerCase();
-    const typing = clean_(payload.typeable_romanization).toLowerCase();
+    let typing = clean_(payload.typeable_romanization).toLowerCase();
     if (!skipped && !['yes', 'no'].includes(meaning)) throw new Error('meaning_correct must be yes or no');
-    if (!skipped && !['yes', 'no'].includes(typing)) throw new Error('typeable_romanization must be yes or no');
+    if (!skipped && meaning === 'yes' && !['yes', 'no'].includes(typing)) {
+      throw new Error('typeable_romanization must be yes or no when meaning_correct=yes');
+    }
+    if (skipped || meaning !== 'yes') typing = '';
 
     annotationSheet.appendRow([
       new Date(), requestId, taskId, familyId, annotatorId, batch,
       skipped ? '' : meaning,
-      skipped ? '' : typing,
+      typing,
       skipped,
       clean_(payload.instructions_version),
       VALIDATION_TERMS_VERSION,
