@@ -6,16 +6,18 @@ RomanBench uses a deliberately lightweight, free annotation stack for contributo
 - **backend:** Google Apps Script web app;
 - **storage:** Google Sheets;
 - **identity:** pseudonymous annotator ID + random access token;
-- **normal annotation interaction:** two Yes/No judgments plus Skip; no typing required.
+- **normal annotation interaction:** one mandatory Yes/No meaning judgment, a conditional Roman-typing Yes/No judgment, plus Skip; no typing required.
 
 The frontend contains no Google credentials or secrets. The Apps Script runs as the Sheet owner and validates annotator tokens before returning or accepting tasks.
+
+For the operational first-pilot procedure, including personal-link sharing, 30-family task construction, and post-pilot analysis, see [`romanbench-pilot-runbook.md`](romanbench-pilot-runbook.md).
 
 ## Annotator experience
 
 Each contributor receives a personal link such as:
 
 ```text
-https://<github-user>.github.io/KannadaLLMBench/?annotator=KN001&token=<random-token>&batch=pilot
+https://<github-user>.github.io/KannadaLLMBench/?annotator=KN001&token=<random-token>&batch=pilot-v1
 ```
 
 The page shows one pair at a time:
@@ -23,8 +25,10 @@ The page shows one pair at a time:
 1. Kannada sentence;
 2. candidate form typed with English letters;
 3. **Does the Roman text have the same meaning as the Kannada sentence?** Yes / No;
-4. **Would you type Kannada this way using English letters?** Yes / No;
+4. if Question 1 = **Yes**, **Would you type Kannada this way using English letters?** Yes / No;
 5. Skip.
+
+If Question 1 = **No**, the item is submitted immediately and the typing label is stored as N/A/blank. Typing plausibility is undefined when the Roman candidate does not preserve the source meaning.
 
 The interface explicitly says that question 2 is about the English-letter spelling/style and **not** whether the underlying Kannada sentence is formal or colloquial.
 
@@ -35,6 +39,13 @@ Before the first item, contributors are shown the versioned validation contribut
 Until `annotator/config.js` contains an Apps Script URL, the site automatically operates in demo mode.
 
 Demo annotations remain in browser `localStorage` and are never sent anywhere. This allows the UI and instructions to be reviewed before creating a Google Sheet.
+
+The demo intentionally includes:
+
+- meaning-preserving, plausible Roman Kannada;
+- meaning-preserving but formal/awkward transliteration;
+- semantic-negative examples where the Roman candidate changes content such as today→tomorrow or six→eight;
+- a colloquial Kannada example to reinforce that colloquialness is not the Roman-typing label.
 
 To restart the demo, clear site data/local storage for the Pages site.
 
@@ -103,6 +114,8 @@ terms_version
 client_time
 ```
 
+When `meaning_correct=no`, `typeable_romanization` is intentionally blank.
+
 ### Annotators columns
 
 ```text
@@ -144,6 +157,19 @@ The backend does not trust anonymous access by itself. Every request still needs
 
 If a Workspace policy does not allow anonymous Apps Script web apps, either use an account that permits it or require signed-in access. The frontend design does not otherwise change.
 
+### Updating an existing Apps Script deployment
+
+GitHub does not automatically synchronize `annotator/apps-script/Code.gs` into a Sheet-bound Apps Script project. After backend code changes:
+
+1. copy the merged `Code.gs` into the Sheet's Apps Script editor;
+2. save;
+3. open **Deploy → Manage deployments**;
+4. edit the web-app deployment;
+5. create/select the new version and deploy it;
+6. keep the existing `/exec` URL unless Google explicitly changes it.
+
+The frontend and Apps Script versions must be synchronized before a production annotation batch begins.
+
 ## 5. Connect the frontend
 
 Edit `annotator/config.js`:
@@ -153,18 +179,36 @@ window.ROMANBENCH_CONFIG = {
   apiUrl: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
   demoWhenUnconfigured: true,
   requestTimeoutMs: 15000,
-  instructionsVersion: "romanbench-annotation-v1",
+  instructionsVersion: "romanbench-annotation-v2",
   termsVersion: "romanbench-validation-v1",
 };
 ```
 
 Commit to `main`; the Pages workflow redeploys the static site.
 
-Changing the annotation wording requires bumping `instructionsVersion`, so paper/release metadata can distinguish judgments collected under different instructions. Substantive changes to contributor terms require a new `termsVersion` and a corresponding terms document.
+Changing the annotation wording or interaction semantics requires bumping `instructionsVersion`, so paper/release metadata can distinguish judgments collected under different instructions. Substantive changes to contributor terms require a new `termsVersion` and a corresponding terms document.
 
 ## 6. Load annotation tasks
 
-### From RomanBench generated candidates
+### First pilot: deterministic one-candidate-per-family selection
+
+For the first pilot, build a candidate pool and then select approximately 30 semantic families:
+
+```bash
+make romanbench-candidates \
+  FAMILIES=100 \
+  ROMAN_OUTPUT=data/interim/romanbench/pilot-candidates.jsonl
+
+make romanbench-pilot \
+  PILOT_INPUT=data/interim/romanbench/pilot-candidates.jsonl \
+  PILOT_OUTPUT=data/interim/romanbench/pilot-v1-tasks.csv \
+  PILOT_FAMILIES=30 \
+  PILOT_BATCH=pilot-v1
+```
+
+The pilot builder selects exactly one Roman candidate per family, uses `target_votes=2` by default, and writes a sidecar manifest with the deterministic seed and variant counts.
+
+### Generic generated candidates
 
 ```bash
 make annotator-tasks \
@@ -202,7 +246,7 @@ From the Apps Script editor, run:
 createAnnotator(
   'KN001',
   'https://<github-user>.github.io/KannadaLLMBench',
-  'pilot'
+  'pilot-v1'
 )
 ```
 
@@ -212,7 +256,7 @@ The function:
 2. stores only its SHA-256 hash in `Annotators`;
 3. prints/returns the personal link containing the plaintext token.
 
-Send that link only to the intended contributor.
+Send that link only to the intended contributor. Do not send the base Pages URL by itself.
 
 Rotating the token is as simple as calling `createAnnotator` again for the same ID.
 
@@ -264,19 +308,31 @@ Recommended practices:
 
 Before broad annotation:
 
-1. enable Pages;
-2. review demo mode on phone and desktop;
-3. deploy the Sheet backend;
-4. load approximately 50–100 candidate pairs;
-5. create 3–5 annotator links;
-6. collect two votes per candidate;
-7. inspect skip/disagreement patterns;
-8. revise wording only if needed;
-9. if wording changes, increment `instructionsVersion` and run a new pilot batch.
+1. enable Pages and verify the deployed site;
+2. deploy the Sheet backend and perform an incognito end-to-end test;
+3. make sure the demo includes plausible, awkward, and semantically incorrect candidates;
+4. build 30 semantic families with one candidate each;
+5. load them as `pilot-v1` with `target_votes=2`;
+6. create 4–5 personal annotator links;
+7. collect approximately 60 completed judgments in total;
+8. export the `Annotations` tab to CSV;
+9. run `make romanbench-pilot-analyze`;
+10. inspect meaning agreement, typing agreement, skip rate, `Meaning=Yes/Typing=No`, and disagreement rows before changing the protocol or scaling up.
 
 Do not change question wording midway through a production benchmark version without recording the change.
 
-## 12. Security model and limitations
+## 12. Pilot analysis
+
+After exporting the `Annotations` tab:
+
+```bash
+make romanbench-pilot-analyze \
+  PILOT_ANNOTATIONS=data/interim/romanbench/pilot-v1-annotations.csv
+```
+
+The analysis produces a JSON summary and a task-level disagreement CSV. Roman-typing agreement is computed only among judgments with `meaning_correct=yes`; `meaning_correct=no` rows have no typing label by design.
+
+## 13. Security model and limitations
 
 This system is intentionally lightweight because contributors are known to the project. It is not a high-security crowdsourcing platform.
 
