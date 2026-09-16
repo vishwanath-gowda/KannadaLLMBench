@@ -1,7 +1,6 @@
 window.ROMANBENCH_CONFIG = {
-  // Paste the deployed Google Apps Script Web App URL here for production.
-  // Example: https://script.google.com/macros/s/AKfycb.../exec
-  apiUrl: "",
+  // Deployed Google Apps Script Web App URL for production annotation.
+  apiUrl: "https://script.google.com/macros/s/AKfycbzxAao8M8Mt-81wzCRKj1n_FIE37IMpJKvYCyaOYCD609hccH3YUyBUfMkjItPyQlEztg/exec",
   demoWhenUnconfigured: true,
   requestTimeoutMs: 15000,
   instructionsVersion: "romanbench-annotation-v1",
