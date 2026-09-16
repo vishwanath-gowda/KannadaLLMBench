@@ -1,6 +1,6 @@
 # RomanBench annotation and data strategy
 
-This document is the working research-methodology record for RomanBench. It is intentionally more detailed than normal project documentation so that benchmark construction decisions, alternatives, and limitations are preserved for an eventual paper.
+This document is the working research-methodology record for RomanBench. It is intentionally more detailed than normal project documentation so benchmark-construction decisions, alternatives, assumptions, and limitations are preserved for an eventual paper.
 
 ## 1. Research objective
 
@@ -8,7 +8,7 @@ RomanBench measures how reliably language models process Kannada written in Lati
 
 The benchmark should answer questions such as:
 
-- Does a model preserve meaning when Kannada is written in Roman script?
+- Does a model preserve task performance when Kannada is written in Roman script?
 - How large is the performance gap between Kannada-script input and Romanized Kannada input?
 - Which Roman spelling variations cause the largest failures?
 - Does performance degrade on variants that Kannada speakers consider plausible to type?
@@ -39,7 +39,7 @@ This asks whether the shown Roman spelling is a plausible form the annotator cou
 
 It does **not** ask whether the underlying Kannada sentence is colloquial, formal, literary, grammatical, culturally natural, or code-mixed.
 
-The paper may refer to this dimension as *Romanization typing plausibility*, *Roman-form plausibility*, or another explicitly defined term. Avoid using the bare word *naturalness* because it is ambiguous.
+The paper may refer to this dimension as *Romanization typing plausibility* or *Roman-form plausibility*. Avoid the bare word *naturalness* because it is ambiguous.
 
 ### 2.3 Colloquialness
 
@@ -50,15 +50,15 @@ For example:
 - `ನಾನು ಇಂದು ಮನೆಗೆ ಹೋಗಬೇಕು` is comparatively standard/formal.
 - `ನಾನ್ ಇವತ್ತು ಮನೆಗೆ ಹೋಗ್ಬೇಕು` is more spoken/colloquial.
 
-Either sentence can independently have plausible or implausible Roman spellings. Colloquialness belongs in ColloquialBench or as a separately annotated RomanBench metadata dimension; it must not be conflated with Roman typing plausibility.
+Either sentence can independently have plausible or implausible Roman spellings. Colloquialness belongs in ColloquialBench or as a separately annotated metadata dimension; it must not be conflated with Roman typing plausibility.
 
 ### 2.4 Code mixing
 
 The use of lexical/syntactic material from another language, especially English, within Kannada discourse. This is primarily covered by KanMixBench. RomanBench may contain naturally code-mixed examples, but code mixing should be tagged and analyzed separately.
 
-## 3. Core annotation questions
+## 3. Core annotation protocol
 
-For each Kannada/Roman candidate pair, an annotator sees both forms and answers only two binary questions.
+For each Kannada/Roman candidate pair, the annotator first answers one mandatory semantic question. A second typing-plausibility question is asked only when the candidate preserves the source meaning.
 
 ### Q1 — semantic preservation
 
@@ -66,19 +66,39 @@ For each Kannada/Roman candidate pair, an annotator sees both forms and answers 
 >
 > Yes / No
 
-This detects transliteration errors, lexical substitutions, dropped content, hallucinated content, and other meaning-changing transformations.
+This detects transliteration errors, lexical substitutions, dropped content, hallucinated content, number/time changes, and other meaning-changing transformations.
+
+If Q1 = **No**, the item is submitted immediately. Q2 is not shown and the typing label is stored as N/A/blank.
 
 ### Q2 — Roman typing plausibility
+
+Q2 is shown only if Q1 = **Yes**:
 
 > **Would you type Kannada this way using English letters?**
 >
 > Yes / No
 
-Annotator instruction immediately clarifies:
+The interface immediately clarifies:
 
 > Judge only the English-letter spelling/style. Do not judge whether the Kannada sentence itself is formal or colloquial.
 
-Annotators can skip an item when they do not understand the Kannada sentence well enough to judge it. Skipping is preferred to guessing.
+### Skip
+
+Annotators can skip when they do not understand the Kannada sentence well enough to judge it. Skipping is preferred to guessing. A skip produces no Q1 or Q2 label.
+
+### Why Q2 is conditional
+
+Typing plausibility is meaningful only for a Roman candidate that represents the target Kannada content. Asking whether an incorrect sentence is a plausible way to type the target sentence creates an ill-defined label and contaminates agreement statistics.
+
+The protocol therefore has three substantive completed outcomes rather than a four-cell Q1×Q2 matrix:
+
+| Meaning preserved | Typing label | Interpretation |
+|---|---|---|
+| Yes | Yes | semantically valid + plausible Roman Kannada candidate |
+| Yes | No | semantically valid but implausible/unusual Roman typing; useful controlled negative |
+| No | N/A | semantic mismatch; reject for matched Roman evaluation |
+
+This conditional structure should be described explicitly in the paper and evaluation code.
 
 ## 4. Why validation-first annotation
 
@@ -88,12 +108,12 @@ RomanBench therefore uses a **candidate generation + low-friction human validati
 
 1. obtain a Kannada/Roman candidate pair;
 2. show exactly one pair at a time;
-3. ask two binary questions;
-4. collect independent judgments;
-5. retain the raw vote counts and provenance;
+3. collect a semantic-preservation judgment;
+4. only for semantic positives, collect a Roman-typing plausibility judgment;
+5. retain independent raw judgments and provenance;
 6. apply a versioned aggregation policy when freezing a release.
 
-This should permit hundreds of judgments per annotator without requiring extensive typing.
+A smaller human-authored Roman sample remains important for checking whether candidate generation covers real typing behavior.
 
 ## 5. Data-source strata
 
@@ -103,15 +123,15 @@ RomanBench should preserve a `source_stratum` or equivalent provenance field so 
 
 Preferred where licensing and provenance are clean.
 
-Potential sources include existing Kannada transliteration/Romanization datasets with permissive licenses and identifiable source partitions. Each source must pass the KannadaLLMBench source audit before inclusion.
+Potential sources include Kannada transliteration/Romanization datasets with permissive licenses and identifiable source partitions. Each source must pass the KannadaLLMBench source audit before inclusion.
 
-Existing pairs are **re-annotated** using RomanBench's two questions even if their original dataset labels already consider them valid transliterations. A formally correct transliteration can preserve meaning while still being implausible as ordinary Kannada typing.
+Existing pairs are **re-annotated** using RomanBench's task-specific protocol even if their original dataset labels already consider them valid transliterations. A formally correct transliteration can preserve meaning while still being implausible as ordinary Kannada typing.
 
 Advantages:
 
 - observed spelling variation rather than generator-invented variation;
 - low annotation burden;
-- useful empirical distribution for calibrating synthetic generation.
+- empirical distribution for calibrating synthetic generation.
 
 Risks:
 
@@ -140,20 +160,7 @@ Candidate generation dimensions can include:
 
 Every synthetic item must remain labeled as synthetic even after human validation. Human approval changes its quality status, not its origin.
 
-Advantages:
-
-- scalable;
-- controllable difficulty;
-- supports per-phenomenon diagnostics;
-- supports matched semantic-family evaluation.
-
-Risks:
-
-- generator-support bias: the benchmark may overrepresent patterns the generator knows;
-- unrealistic combinations of individually plausible transformations;
-- model-specific artifacts if an LLM is used as generator.
-
-These risks are why Stratum A and Stratum C are necessary.
+Main risk: **generator-support bias**. A benchmark built only from generated variants may measure robustness to the spelling space the generator already knows rather than the broader distribution humans use.
 
 ### Stratum C — fresh human-origin content
 
@@ -162,9 +169,9 @@ Fresh content is the preferred basis for a contamination-resistant private leade
 The strongest workflow has two independent stages:
 
 1. a Kannada speaker authors a new Kannada control sentence;
-2. different Kannada speakers produce or validate Roman forms without seeing synthetic suggestions.
+2. different Kannada speakers produce or validate Roman forms without seeing other contributors' answers.
 
-The repository already provides an independent human-authoring/Romanization workflow. If the final protocol changes to validation-first, fresh Kannada controls can still be paired with generated candidates for low-friction validation, but a smaller independently typed sample should be retained as an empirical check on generator coverage.
+A smaller independently typed sample should be retained even if the production workflow is mostly validation-first. It is an empirical check on generator coverage.
 
 Advantages:
 
@@ -175,11 +182,11 @@ Advantages:
 Cost:
 
 - highest contributor burden;
-- requires careful data handling and licensing/consent.
+- requires careful contribution terms and data handling.
 
 ## 6. Recommended v0.1 composition
 
-Exact percentages should be finalized after a pilot and recorded before freezing the benchmark. A reasonable starting target is:
+Exact percentages should be finalized after the pilot and recorded before freezing the benchmark. A reasonable starting target is:
 
 - **30–40%** re-annotated existing permissive human/natural Roman pairs;
 - **40–50%** synthetic variants whose generation rules are calibrated from observed Roman Kannada;
@@ -187,37 +194,52 @@ Exact percentages should be finalized after a pilot and recorded before freezing
 
 The final private leaderboard subset should place greater weight on fresh content than the public development set.
 
-These numbers are design targets, not fixed claims. The released dataset manifest must contain the actual counts.
+These are design targets, not fixed claims. The released dataset manifest must contain actual counts.
 
 ## 7. Annotation unit and independence
 
 The annotation unit is one `(semantic_family_id, roman_variant)` pair.
 
-A semantic family groups all variants derived from the same Kannada semantic control.
+A semantic family groups variants derived from the same Kannada semantic control.
 
 Rules:
 
-- an annotator should see at most one variant from a semantic family during the same annotation campaign;
+- an annotator should see at most one variant from a semantic family within a batch;
 - an annotator must not judge a family they authored;
 - annotators never see other annotators' votes;
 - annotators never see synthetic/formal reference suggestions beyond the candidate being judged;
 - task assignment should balance vote counts across candidates;
-- presentation order should not encode candidate quality or generator type.
+- presentation order should not encode candidate quality or generator type;
+- progress and vote counts are scoped by annotation batch.
 
-These controls reduce anchoring, within-family dependence, and self-evaluation bias.
+The one-family-per-annotator rule reduces anchoring between spelling variants of the same content.
 
-## 8. Annotation outcome matrix
+## 8. First pilot design
 
-The two binary labels create four meaningful outcomes.
+The first pilot is a process-calibration study, not automatic benchmark gold.
 
-| Same meaning | Would type this way | Interpretation |
-|---|---|---|
-| Yes | Yes | semantically valid + plausible Roman Kannada candidate |
-| Yes | No | semantically valid but implausible/unusual typing; useful controlled negative |
-| No | Yes | typing form may look plausible but the candidate does not preserve the target meaning; reject for matched evaluation |
-| No | No | invalid candidate; reject |
+Configuration:
 
-The `Yes/No` distinction on Q2 should not be converted into a colloquialness claim.
+- approximately 30 semantic families;
+- one Roman candidate per family;
+- `target_votes = 2`;
+- 4–5 Kannada-speaking annotators;
+- deterministic family selection from a larger candidate pool;
+- a controlled mixture of available Romanization variant types;
+- versioned instruction identifier `romanbench-annotation-v2`.
+
+Thirty tasks × two votes = approximately 60 completed judgments.
+
+The pilot should verify:
+
+- annotators understand the distinction between meaning and typing plausibility;
+- semantic-negative examples are recognized;
+- Q2 rejection occurs independently of colloquialness;
+- skip rate is reasonable;
+- assignment and backend behavior are reliable;
+- disagreement is analyzable before production thresholds are frozen.
+
+Synthetic/public-corpus pilot items are calibration material. They are not promoted to a private leaderboard merely because annotators approve them.
 
 ## 9. Votes and aggregation
 
@@ -225,7 +247,7 @@ Raw judgments must always be retained. A release should derive aggregate labels 
 
 ### Pilot
 
-Use at least two independent votes per candidate to measure disagreement and task clarity.
+Use at least two independent votes per candidate.
 
 ### Production
 
@@ -235,35 +257,45 @@ Three votes per candidate are preferable for ambiguous forms if volunteer capaci
 
 This is a candidate policy to test during the pilot, not yet a frozen benchmark rule:
 
-- semantic validity: require unanimous semantic agreement among completed votes;
-- Roman typing positive: majority `Yes` among semantically valid votes;
-- Roman typing controlled negative: majority `No` while semantic validity remains unanimous;
+- semantic validity: require strong/unanimous Q1 agreement among completed votes;
+- Roman typing positive: majority `Yes` among Q1=`Yes` votes;
+- Roman typing controlled negative: majority `No` while semantic validity remains accepted;
 - semantic disagreement: adjudicate or exclude;
 - excessive Q2 disagreement: retain as an ambiguity set or exclude from the primary score.
 
-The final thresholds should be fixed before examining model leaderboard results on the private test set.
+Thresholds should be frozen before examining private-test model leaderboard results.
 
 ## 10. Quality-control analysis
 
 The eventual paper should report annotation quality rather than only stating that humans reviewed the data.
 
-Recommended statistics:
+Pilot metrics implemented in the repository include:
 
-- raw agreement for Q1 and Q2 separately;
-- Cohen's kappa for two-annotator pilot subsets where appropriate;
-- Fleiss' kappa or Krippendorff's alpha for multi-annotator production subsets;
-- skip rate;
-- disagreement rate by source stratum;
-- disagreement rate by variation type;
-- median/quantile annotation time only if collected with an explicit reason and privacy policy;
+- annotation count;
+- skip count/rate;
+- unique tasks and semantic families observed;
+- pairwise Q1 agreement;
+- pairwise Q2 agreement **only among Q1=`Yes` judgments**;
+- count/rate of `Meaning=Yes, Typing=No` judgments;
+- task-level Q1 disagreement list;
+- task-level Q2 disagreement list.
+
+With two annotators, pairwise agreement is the fraction of doubly annotated items where labels match. The implementation generalizes to more annotators by comparing all within-task label pairs.
+
+For a larger paper dataset, also consider:
+
+- Cohen's kappa for appropriate two-annotator subsets;
+- Fleiss' kappa or Krippendorff's alpha for multi-annotator subsets;
+- disagreement by source stratum;
+- disagreement by variation type;
 - percentage of synthetic candidates rejected for semantic mismatch;
 - percentage of semantically correct candidates rejected for typing implausibility.
 
-Do not treat a single aggregate agreement value as sufficient; Q1 and Q2 measure different concepts and should be reported independently.
+Do not report one aggregate agreement value as if Q1 and Q2 measured the same construct.
 
 ## 11. Generator calibration using existing permissive data
 
-A major methodological goal is to avoid evaluating only the spelling space invented by our synthetic generator.
+A major methodological goal is to avoid evaluating only the spelling space invented by the synthetic generator.
 
 For each audited real Kannada/Roman source:
 
@@ -271,8 +303,8 @@ For each audited real Kannada/Roman source:
 2. map Kannada/Roman pairs to semantic families;
 3. measure character/morpheme correspondence patterns;
 4. identify recurring Roman variants;
-5. estimate the frequency of transformations where data volume permits;
-6. use the observed transformations to define generator rules;
+5. estimate transformation frequency where data volume permits;
+6. use observed transformations to define generator rules;
 7. reserve at least one independent source or held-out partition to compare generator output against real Roman text.
 
 Possible diagnostics include:
@@ -283,7 +315,7 @@ Possible diagnostics include:
 - consonant/aspiration spelling alternatives;
 - token-length ratios;
 - lexical/morpheme contraction patterns;
-- coverage: fraction of held-out human Roman forms whose major variation patterns are representable by the generator.
+- coverage of major variation patterns in held-out human Roman forms.
 
 A held-out real-data check is important evidence against generator-support bias.
 
@@ -298,9 +330,9 @@ A dataset may certify that a Roman form is a transliteration without telling us 
 - it is formal transliteration rather than everyday Roman Kannada;
 - it is a source artifact or generated form.
 
-RomanBench therefore records original provenance and adds its own task-specific human judgments.
+RomanBench therefore retains original provenance and adds its own task-specific human judgments.
 
-No top-level Hugging Face license badge alone is sufficient to approve a source. Exact subset, upstream origin, redistribution rights, and derivative-use permissions must be documented in the source registry/audit.
+No top-level dataset license badge alone is sufficient to approve a source. Exact subset, upstream origin, redistribution rights, and derivative-use permissions must be documented in the source registry/audit.
 
 ## 13. Public vs private evaluation
 
@@ -336,42 +368,43 @@ When source document IDs exist, document-level separation is preferable to row-l
 Recommended conceptual splits:
 
 - `dev`: public, answer-bearing, suitable for prompt/evaluator debugging;
-- `public_test`: public inputs; potentially useful for reproducible model comparisons;
+- `public_test`: public inputs for reproducible model comparisons;
 - `private_test`: hidden fresh-content evaluation for leaderboard integrity;
 - `diagnostic`: curated variation categories and controlled negatives.
 
-## 15. Benchmark metrics
+## 15. Benchmark evaluation metrics
 
-RomanBench should report more than one overall accuracy number.
+Human Yes/No annotation is a **data-construction mechanism**, not the headline LLM benchmark task.
 
-Recommended metrics:
+RomanBench should evaluate models on validated Roman inputs through tasks such as:
 
-### Task performance
+### Roman-to-Kannada normalization
+
+Given validated Roman Kannada, recover the corresponding Kannada-script form while preserving meaning.
+
+### Matched semantic robustness
+
+Run the same semantic task using:
+
+1. the Kannada-script control;
+2. a validated Roman variant of the same semantic family.
+
+Report the Kannada-script score, Roman score, and robustness gap.
+
+### Recommended reporting
 
 - transliteration/normalization exact or normalized accuracy;
-- QA/instruction accuracy when later tasks are added;
+- downstream QA/intent/instruction accuracy where labels exist;
+- Kannada-script minus Roman performance gap;
 - semantic-family consistency;
-- worst-variant accuracy within semantic families.
-
-### Robustness gaps
-
-- Kannada-script control score minus Roman score;
-- formal transliteration vs plausible Roman-typing gap;
+- worst-variant accuracy within semantic families;
 - human-origin vs synthetic-validated gap;
-- per-variation-type accuracy.
+- performance by source stratum;
+- performance by typing-plausibility label;
+- performance by generator/variation type;
+- colloquialness/code-mix slices only when those properties are independently tagged.
 
-### Coverage slices
-
-Report separately by:
-
-- source stratum;
-- typing-plausibility label;
-- colloquialness tag if later independently annotated;
-- code-mix presence;
-- sentence length;
-- generator/variation type.
-
-An overall score can be supplied for usability, but the benchmark's research value comes from these interpretable sub-scores.
+An overall score can be supplied for usability, but the benchmark's research value comes from interpretable sub-scores and robustness gaps.
 
 ## 16. Annotation platform design
 
@@ -380,17 +413,18 @@ The annotation application is intentionally minimal:
 - one Kannada sentence;
 - one Roman candidate;
 - Q1 Yes/No;
-- Q2 Yes/No;
+- if Q1=Yes, Q2 Yes/No;
+- if Q1=No, immediate submit with Q2=N/A;
 - Skip;
-- Submit and advance.
+- no normal free-text response.
 
-No free-text response is required for normal validation.
-
-The interface must include the exact clarification:
+The interface must include the exact conceptual clarification:
 
 > Judge only the English-letter spelling/style. Do not judge whether the Kannada sentence itself is formal or colloquial.
 
 The platform uses pseudonymous annotator IDs. Names, email addresses, and unnecessary device/user metadata are not required for benchmark construction.
+
+The production site can expose a local-only demo preview via `?demo=1`; demo responses remain in browser storage and are not sent to the Sheet backend.
 
 ## 17. Ethics, privacy, and contribution terms
 
@@ -413,34 +447,38 @@ Each released benchmark version should freeze:
 - source registry revisions;
 - candidate-generation code revision;
 - generation configuration;
+- pilot/final selection seed where applicable;
 - annotation instruction version;
+- contribution-terms version;
 - aggregation rule version;
-- raw vote counts (where release/privacy policy allows);
+- raw vote counts where release/privacy policy allows;
 - accepted/excluded item manifest;
 - semantic-family split manifest;
 - hashes of release artifacts;
 - model/evaluator versions for baseline results.
 
-Changing annotation wording creates a new instruction version and should not silently mix with prior judgments without analysis.
+Changing annotation wording or interaction semantics creates a new instruction version and should not silently mix with prior judgments without analysis.
 
 ## 19. Paper-writing checklist
 
 The eventual paper's Data/Methods section should explicitly state:
 
 1. what RomanBench means by Romanization typing plausibility;
-2. why that is distinct from colloquialness and code mixing;
-3. source strata and exact counts;
-4. source licenses/provenance and filtering;
-5. synthetic-generation rules and how real data calibrated them;
-6. exact annotator-facing questions;
-7. annotator assignment and independence rules;
-8. number of votes per item and aggregation thresholds;
-9. agreement/disagreement statistics;
-10. contamination controls and public/private split rationale;
-11. distribution and generator-bias limitations;
-12. benchmark metrics and slice definitions;
-13. model baselines and inference settings;
-14. release/version hashes and reproducibility artifacts.
+2. why it is distinct from colloquialness and code mixing;
+3. why Q2 is conditional on semantic preservation;
+4. source strata and exact counts;
+5. source licenses/provenance and filtering;
+6. synthetic-generation rules and how real data calibrated them;
+7. exact annotator-facing questions;
+8. annotator assignment and independence rules;
+9. number of votes per item and aggregation thresholds;
+10. Q1 and conditional-Q2 agreement/disagreement statistics;
+11. skip rate and `Meaning=Yes/Typing=No` rate;
+12. contamination controls and public/private split rationale;
+13. distribution and generator-bias limitations;
+14. benchmark task definitions and robustness-gap metrics;
+15. model baselines and inference settings;
+16. release/version hashes and reproducibility artifacts.
 
 ## 20. Known limitations to preserve for the paper
 
@@ -449,9 +487,10 @@ Do not lose these limitations during development:
 - Kannada Romanization has no single universally accepted informal spelling standard.
 - Individual speakers may strongly prefer different valid spellings.
 - Binary typing-plausibility judgments compress a graded phenomenon.
-- Volunteer annotators known to the project may not represent all Kannada-speaking regions/ages/dialects.
+- Volunteer annotators known to the project may not represent all Kannada-speaking regions, ages, or dialects.
 - Existing public Roman datasets may have pretraining contamination.
 - Synthetic generation can encode its own support bias.
+- A low-friction validation protocol measures acceptance of shown candidates; it does not by itself reveal every form a speaker might spontaneously author.
 - Formal Kannada, colloquial Kannada, and Kannada-English code mixing have different distributions and should not be treated as interchangeable.
 
-These are not reasons to avoid the benchmark; they are reasons to preserve source/annotation metadata and report stratified results.
+These are not reasons to avoid the benchmark; they are reasons to preserve source/annotation metadata, maintain a smaller independently authored calibration sample, and report stratified results.
