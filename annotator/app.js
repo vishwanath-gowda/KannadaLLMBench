@@ -48,6 +48,7 @@
   let progress = { completed: 0, total: 0 };
   let optimisticCompleted = 0;
   const pendingSubmissions = new Set();
+  const sessionSeenTaskIds = new Set();
 
   function bundleSize() {
     const value = Number(config.prefetchCount || 5);
@@ -138,6 +139,7 @@
 
   function renderTask(task) {
     currentTask = task;
+    sessionSeenTaskIds.add(task.task_id);
     resetAnswers();
     ui.kannadaText.textContent = task.kannada;
     ui.romanText.textContent = task.roman;
@@ -272,7 +274,8 @@
   }
 
   function enqueueTasks(tasks) {
-    const known = new Set(taskQueue.map((task) => task.task_id));
+    const known = new Set(sessionSeenTaskIds);
+    taskQueue.forEach((task) => known.add(task.task_id));
     if (currentTask) known.add(currentTask.task_id);
     for (const task of tasks || []) {
       if (!task || !task.task_id || known.has(task.task_id)) continue;
