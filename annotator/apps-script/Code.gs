@@ -34,6 +34,7 @@ function doGet(e) {
     const params = (e && e.parameter) || {};
     const action = clean_(params.action) || 'next';
     if (action === 'ping') result = { ok: true, pong: true, server_time: new Date().toISOString() };
+    else if (action === 'resolve') result = resolveIdentity_(params);
     else if (action === 'next') result = nextTasks_(params);
     else result = { ok: false, error: 'Unsupported GET action' };
   } catch (error) {
@@ -82,13 +83,6 @@ function onOpen() {
     .addToUi();
 }
 
-/**
- * Run from the Apps Script editor to create or rotate an annotator token.
- * The plaintext token is returned/logged once; only its SHA-256 hash is stored.
- *
- * Example:
- * createAnnotator('KN001', SITE_URL, 'pilot-v1')
- */
 function createAnnotator(annotatorId, siteUrl, batches, maxTasks) {
   setupAnnotationSheets();
   annotatorId = clean_(annotatorId);
@@ -102,6 +96,7 @@ function createAnnotator(annotatorId, siteUrl, batches, maxTasks) {
   const existing = rows.find((row) => clean_(row.annotator_id) === annotatorId);
   const requestedMax = clean_(maxTasks);
   const effectiveMax = requestedMax || (existing ? existing.max_tasks : '');
+  const note = `access_token=${token}`;
 
   if (existing) {
     sheet.getRange(existing.__row, 2, 1, 5).setValues([[
@@ -109,17 +104,18 @@ function createAnnotator(annotatorId, siteUrl, batches, maxTasks) {
       true,
       batches || '',
       effectiveMax,
-      'token rotated'
+      note
     ]]);
   } else {
-    sheet.appendRow([annotatorId, tokenHash, true, batches || '', effectiveMax, '']);
+    sheet.appendRow([annotatorId, tokenHash, true, batches || '', effectiveMax, note]);
   }
 
   const base = String(siteUrl || '').replace(/\/$/, '');
   const firstBatch = String(batches || 'default').split(',')[0].trim() || 'default';
   const url = `${base}/?annotator=${encodeURIComponent(annotatorId)}&token=${encodeURIComponent(token)}&batch=${encodeURIComponent(firstBatch)}`;
-  console.log(`${annotatorId}: ${url}`);
-  return url;
+  console.log(`${annotatorId} token: ${token}`);
+  console.log(`${annotatorId} legacy URL: ${url}`);
+  return token;
 }
 
 function createVishwanathAnnotator() {
@@ -134,6 +130,35 @@ function createPilotAnnotators() {
   const vishwanath = createVishwanathAnnotator();
   const sharath = createSharathAnnotator();
   return { vishwanath, sharath };
+}
+
+function resolveIdentity_(params) {
+  const token = clean_(params.token);
+  if (!token) throw new Error('Enter your annotator token');
+
+  const ss = SpreadsheetApp.getActive();
+  const sheet = requireSheet_(ss, SHEETS.ANNOTATORS);
+  const tokenHash = sha256_(token);
+  const row = rowsAsObjects_(sheet).find((candidate) => (
+    truthy_(candidate.active) && clean_(candidate.token_sha256) === tokenHash
+  ));
+  if (!row) throw new Error('Invalid or inactive annotator token');
+
+  const requestedBatch = clean_(params.batch);
+  const allowed = clean_(row.batches);
+  const allowedBatches = allowed
+    ? allowed.split(',').map((value) => value.trim()).filter(Boolean)
+    : [];
+
+  if (requestedBatch && allowedBatches.length && !allowedBatches.includes(requestedBatch)) {
+    throw new Error('Annotator is not assigned to this batch');
+  }
+
+  return {
+    ok: true,
+    annotator: clean_(row.annotator_id),
+    batch: requestedBatch || allowedBatches[0] || 'default',
+  };
 }
 
 function nextTasks_(params) {
