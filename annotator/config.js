@@ -1,6 +1,6 @@
 window.ROMANBENCH_CONFIG = {
   // Deployed Google Apps Script Web App URL for production annotation.
-  apiUrl: "https://script.google.com/macros/s/AKfycby_cFneySes5wuGOmZmjovhvPSWnZBElIYT9kAV8kNT936EzM-VY71HQdDd0fjzYBpqiQ/exec",
+  apiUrl: "https://script.google.com/macros/s/AKfycbxBsiWGoNt2Q9RqSkLSrfR44ihOprFiANaEaHbfyLgyalZAOzBa76Fd4GRU4qf_StOB8w/exec",
   demoWhenUnconfigured: true,
   requestTimeoutMs: 15000,
   prefetchCount: 5,
