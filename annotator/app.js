@@ -42,6 +42,22 @@
   let currentTask = null;
   let answers = { meaning: null, typing: null };
   let demoTasks = [];
+  let taskQueue = [];
+  let refillPromise = null;
+  let backendDone = false;
+  let progress = { completed: 0, total: 0 };
+  let optimisticCompleted = 0;
+  const pendingSubmissions = new Set();
+
+  function bundleSize() {
+    const value = Number(config.prefetchCount || 5);
+    return Math.max(1, Math.min(8, Number.isFinite(value) ? Math.floor(value) : 5));
+  }
+
+  function refillThreshold() {
+    const value = Number(config.refillThreshold || 2);
+    return Math.max(0, Math.min(bundleSize() - 1, Number.isFinite(value) ? Math.floor(value) : 2));
+  }
 
   function showOnly(section) {
     [ui.welcome, ui.annotationCard, ui.loadingCard, ui.doneCard, ui.fatalError].forEach((node) => {
@@ -70,6 +86,7 @@
     document.querySelectorAll(".choice").forEach((button) => button.classList.remove("selected"));
     ui.typingQuestion.classList.add("hidden");
     ui.submitButton.classList.add("hidden");
+    ui.skipButton.disabled = false;
     updateSubmitState();
   }
 
@@ -86,7 +103,7 @@
       ui.typingQuestion.classList.add("hidden");
       ui.submitButton.classList.add("hidden");
       ui.submitButton.disabled = true;
-      ui.submitHint.textContent = "Meaning differs — saving and moving on…";
+      ui.submitHint.textContent = "Meaning differs — moving on…";
       return;
     }
 
@@ -112,15 +129,19 @@
     updateSubmitState();
   }
 
-  function renderTask(task, progress = {}) {
+  function updateProgressDisplay() {
+    const completed = Math.max(Number(progress.completed || 0), optimisticCompleted);
+    const total = Number(progress.total || 0);
+    ui.progressText.textContent = total > 0 ? `${Math.min(completed + 1, total)} of ${total}` : "Next item";
+    ui.progressBar.style.width = total > 0 ? `${Math.min(100, (completed / total) * 100)}%` : "0%";
+  }
+
+  function renderTask(task) {
     currentTask = task;
     resetAnswers();
     ui.kannadaText.textContent = task.kannada;
     ui.romanText.textContent = task.roman;
-    const completed = Number(progress.completed || 0);
-    const total = Number(progress.total || 0);
-    ui.progressText.textContent = total > 0 ? `${completed + 1} of ${total}` : "Next item";
-    ui.progressBar.style.width = total > 0 ? `${Math.min(100, (completed / total) * 100)}%` : "0%";
+    updateProgressDisplay();
     ui.annotatorText.textContent = isDemo ? "Demo" : identity.annotator;
     showOnly(ui.annotationCard);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -141,7 +162,7 @@
     }
   }
 
-  function apiGetNext() {
+  function apiGetNext(count = bundleSize()) {
     return new Promise((resolve, reject) => {
       const callback = `__romanbench_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       const url = new URL(config.apiUrl);
@@ -149,6 +170,7 @@
       url.searchParams.set("annotator", identity.annotator);
       url.searchParams.set("token", identity.token);
       url.searchParams.set("batch", identity.batch);
+      url.searchParams.set("count", String(count));
       url.searchParams.set("prefix", callback);
 
       const script = document.createElement("script");
@@ -176,6 +198,18 @@
     });
   }
 
+  function warmBackend() {
+    if (isDemo || !config.apiUrl) return;
+    try {
+      const url = new URL(config.apiUrl);
+      url.searchParams.set("action", "ping");
+      url.searchParams.set("_", String(Date.now()));
+      fetch(url.toString(), { mode: "no-cors", cache: "no-store", keepalive: true }).catch(() => {});
+    } catch (_) {
+      // Warm-up is best-effort only.
+    }
+  }
+
   async function apiSubmit(payload) {
     const body = JSON.stringify(payload);
     try {
@@ -196,6 +230,7 @@
         mode: "no-cors",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body,
+        keepalive: true,
       });
       return { ok: true, optimistic: true, warning: String(error) };
     }
@@ -221,54 +256,151 @@
     demoTasks = await response.json();
   }
 
-  async function demoNext() {
+  async function demoBundle(count) {
     await loadDemoTasks();
     const seenFamilies = new Set(demoAnnotations().map((row) => row.semantic_family_id));
-    const task = demoTasks.find((candidate) => !seenFamilies.has(candidate.semantic_family_id));
+    if (currentTask) seenFamilies.add(currentTask.semantic_family_id);
+    taskQueue.forEach((task) => seenFamilies.add(task.semantic_family_id));
+    const tasks = demoTasks.filter((candidate) => !seenFamilies.has(candidate.semantic_family_id)).slice(0, count);
+    const completed = demoAnnotations().length;
     return {
       ok: true,
-      done: !task,
-      task,
-      progress: { completed: seenFamilies.size, total: demoTasks.length },
+      done: tasks.length === 0,
+      tasks,
+      progress: { completed, total: demoTasks.length },
     };
   }
 
-  async function getNextTask() {
-    showOnly(ui.loadingCard);
-    ui.loadingText.textContent = "Loading your next item…";
+  function enqueueTasks(tasks) {
+    const known = new Set(taskQueue.map((task) => task.task_id));
+    if (currentTask) known.add(currentTask.task_id);
+    for (const task of tasks || []) {
+      if (!task || !task.task_id || known.has(task.task_id)) continue;
+      taskQueue.push(task);
+      known.add(task.task_id);
+    }
+  }
+
+  async function requestBundle() {
+    return isDemo ? demoBundle(bundleSize()) : apiGetNext(bundleSize());
+  }
+
+  async function fillQueue({ foreground = false } = {}) {
+    if (refillPromise) return refillPromise;
+    if (foreground && !currentTask && taskQueue.length === 0) {
+      showOnly(ui.loadingCard);
+      ui.loadingText.textContent = "Loading your items…";
+    }
+
+    refillPromise = (async () => {
+      const data = await requestBundle();
+      const tasks = Array.isArray(data.tasks) ? data.tasks : (data.task ? [data.task] : []);
+      enqueueTasks(tasks);
+      backendDone = Boolean(data.done) && tasks.length === 0;
+      if (data.progress) {
+        progress = data.progress;
+        optimisticCompleted = Math.max(optimisticCompleted, Number(progress.completed || 0));
+      }
+      return data;
+    })();
+
     try {
-      const data = isDemo ? await demoNext() : await apiGetNext();
-      if (data.done || !data.task) {
-        ui.doneText.textContent = isDemo
-          ? "Demo complete. Refresh after clearing this site's local storage to try it again."
-          : "Thank you. Your annotations have been recorded.";
-        showOnly(ui.doneCard);
+      return await refillPromise;
+    } finally {
+      refillPromise = null;
+    }
+  }
+
+  function backgroundRefillIfNeeded() {
+    if (isDemo && backendDone) return;
+    if (taskQueue.length <= refillThreshold()) {
+      fillQueue().catch((error) => {
+        console.warn("RomanBench background refill failed", error);
+      });
+    }
+  }
+
+  function showDone() {
+    ui.doneText.textContent = isDemo
+      ? "Demo complete. Refresh after clearing this site's local storage to try it again."
+      : "Thank you. Your annotations have been recorded.";
+    showOnly(ui.doneCard);
+  }
+
+  async function showNextTask() {
+    if (currentTask) return;
+
+    if (taskQueue.length > 0) {
+      renderTask(taskQueue.shift());
+      backgroundRefillIfNeeded();
+      return;
+    }
+
+    showOnly(ui.loadingCard);
+    ui.loadingText.textContent = "Loading your items…";
+
+    if (pendingSubmissions.size > 0) {
+      await Promise.allSettled(Array.from(pendingSubmissions));
+    }
+
+    try {
+      await fillQueue({ foreground: true });
+      if (taskQueue.length > 0) {
+        renderTask(taskQueue.shift());
+        backgroundRefillIfNeeded();
         return;
       }
-      renderTask(data.task, data.progress || {});
+      if (backendDone) {
+        showDone();
+        return;
+      }
+      ui.loadingText.textContent = "No item is available right now. Trying once more…";
+      await fillQueue({ foreground: true });
+      if (taskQueue.length > 0) {
+        renderTask(taskQueue.shift());
+        backgroundRefillIfNeeded();
+      } else {
+        showDone();
+      }
     } catch (error) {
       ui.fatalErrorText.textContent = error.message || String(error);
       showOnly(ui.fatalError);
     }
   }
 
-  async function submitCurrent(skipped = false) {
+  function queueSubmission(payload) {
+    const promise = (async () => {
+      if (isDemo) {
+        saveDemoAnnotation(payload);
+        return { ok: true };
+      }
+      return apiSubmit(payload);
+    })()
+      .catch((error) => {
+        ui.identityError.textContent = `A background save may have failed. Please stop and reload before continuing. ${error.message || error}`;
+        ui.identityError.classList.remove("hidden");
+        throw error;
+      })
+      .finally(() => pendingSubmissions.delete(promise));
+
+    pendingSubmissions.add(promise);
+    return promise;
+  }
+
+  function submitCurrent(skipped = false) {
     if (!currentTask) return;
     if (!skipped && answers.meaning === null) return;
     if (!skipped && answers.meaning === "yes" && answers.typing === null) return;
 
-    ui.submitButton.disabled = true;
-    ui.skipButton.disabled = true;
-    ui.submitHint.textContent = "Saving…";
-
+    const task = currentTask;
     const payload = {
       action: "submit",
-      request_id: makeRequestId(currentTask.task_id),
+      request_id: makeRequestId(task.task_id),
       annotator: isDemo ? "demo" : identity.annotator,
       token: isDemo ? "demo" : identity.token,
       batch: identity.batch,
-      task_id: currentTask.task_id,
-      semantic_family_id: currentTask.semantic_family_id,
+      task_id: task.task_id,
+      semantic_family_id: task.semantic_family_id,
       meaning_correct: skipped ? "" : answers.meaning,
       typeable_romanization: skipped || answers.meaning !== "yes" ? "" : answers.typing,
       skipped,
@@ -276,17 +408,12 @@
       client_time: new Date().toISOString(),
     };
 
-    try {
-      if (isDemo) saveDemoAnnotation(payload);
-      else await apiSubmit(payload);
-      currentTask = null;
-      await getNextTask();
-    } catch (error) {
-      ui.fatalErrorText.textContent = `Your answer was not confirmed. ${error.message || error}`;
-      showOnly(ui.fatalError);
-    } finally {
-      ui.skipButton.disabled = false;
-    }
+    currentTask = null;
+    if (!skipped) optimisticCompleted += 1;
+    queueSubmission(payload).catch(() => {});
+
+    // The next leased item is already in memory, so the UI advances immediately.
+    showNextTask();
   }
 
   function validateIdentity() {
@@ -303,31 +430,33 @@
   }
 
   document.querySelectorAll(".choice").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       setChoice(button.dataset.question, button.dataset.value);
       if (button.dataset.question === "meaning" && button.dataset.value === "no") {
-        await submitCurrent(false);
+        submitCurrent(false);
       }
     });
   });
   ui.submitButton.addEventListener("click", () => submitCurrent(false));
   ui.skipButton.addEventListener("click", () => submitCurrent(true));
-  ui.retryButton.addEventListener("click", getNextTask);
+  ui.retryButton.addEventListener("click", () => showNextTask());
   ui.startButton.addEventListener("click", () => {
     markInstructionsSeen();
-    getNextTask();
+    ui.instructionsDialog.close();
+    showNextTask();
   });
   ui.instructionsButton.addEventListener("click", () => ui.instructionsDialog.showModal());
   ui.closeInstructions.addEventListener("click", () => ui.instructionsDialog.close());
 
   async function initialize() {
     if (!validateIdentity()) return;
+    warmBackend();
     if (!instructionsSeen()) {
       showOnly(ui.welcome);
       ui.instructionsDialog.showModal();
       return;
     }
-    await getNextTask();
+    await showNextTask();
   }
 
   initialize();
