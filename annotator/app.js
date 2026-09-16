@@ -8,7 +8,8 @@
     token: params.get("token") || "",
     batch: params.get("batch") || "default",
   };
-  const isDemo = !config.apiUrl && config.demoWhenUnconfigured !== false;
+  const forceDemo = params.get("demo") === "1";
+  const isDemo = forceDemo || (!config.apiUrl && config.demoWhenUnconfigured !== false);
 
   const el = (id) => document.getElementById(id);
   const ui = {
