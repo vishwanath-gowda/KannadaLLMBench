@@ -46,16 +46,21 @@
     config.apiUrl = scopedApiUrl.toString();
   }
 
-  function loadMobileLayer() {
+  function loadUiLayers() {
     const css = document.createElement("link");
     css.rel = "stylesheet";
     css.href = "mobile.css?v=1";
     document.head.appendChild(css);
 
-    const script = document.createElement("script");
-    script.src = "mobile-ui.js?v=1";
-    script.defer = true;
-    document.body.appendChild(script);
+    const mobileScript = document.createElement("script");
+    mobileScript.src = "mobile-ui.js?v=1";
+    mobileScript.defer = true;
+    document.body.appendChild(mobileScript);
+
+    const retryScript = document.createElement("script");
+    retryScript.src = "auto-retry.js?v=1";
+    retryScript.defer = true;
+    document.body.appendChild(retryScript);
   }
 
   function loadAnnotatorApp() {
@@ -63,7 +68,7 @@
     const script = document.createElement("script");
     script.src = "app-v3.js?v=durable-1";
     script.defer = true;
-    script.onload = loadMobileLayer;
+    script.onload = loadUiLayers;
     document.body.appendChild(script);
   }
 
